@@ -58,6 +58,11 @@ def read_map_points(filename):
         return [MapPoint(*map(float, line.split())) for line in f]
 
 
+def read_gps_estimate(filename):
+    with open(filename, 'r') as f:
+        return [GPSPos(*map(float, line.split())) for line in f]
+
+
 def smooth_elevation(elevations):
     # Set up the Kalman filter
     kf = KalmanFilter(transition_matrices=[1],
