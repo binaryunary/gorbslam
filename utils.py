@@ -34,15 +34,7 @@ class MapPoint:
         self.z = z
 
 
-class ORBSLAMResults:
-    def __init__(self, results_root):
-        root = path.expanduser(results_root)
-        self.keyframes = read_keyframes(path.join(root, 'KeyFrameTrajectory.txt'), path.join(root, 'GPSTrajectory.txt'))
-        self.map_points = read_map_points(path.join(root, 'MapPoints.txt'))
-        self.gps_estimate = read_gps_estimate(path.join(root, 'GPSEstimates.txt'))
-
-
-def read_keyframes(keyframe_file, gps_file):
+def read_keyframe_trajectory(keyframe_file, gps_file):
     """Reads a keyframe trajectory from a file.
     Args:
         filename: The name of the file to read.
