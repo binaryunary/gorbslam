@@ -1,6 +1,10 @@
 import typing
+from os import path
+
 import numpy as np
 from pykalman import KalmanFilter
+from scipy.optimize import least_squares
+from scipy.spatial.transform import Rotation as R
 
 
 class GPSPos:
@@ -15,8 +19,8 @@ class KeyFrame:
         self.timestamp = timestamp
         self.gps = gps
         self.x = x
-        self.y = z
-        self.z = y * -1
+        self.y = y
+        self.z = z
         self.qx = qx
         self.qy = qy
         self.qz = qz
@@ -26,11 +30,19 @@ class KeyFrame:
 class MapPoint:
     def __init__(self, x, y, z):
         self.x = x
-        self.y = z
-        self.z = y * -1
+        self.y = y
+        self.z = z
 
 
-def read_keyframe_trajectory(keyframe_file, gps_file):
+class ORBSLAMResults:
+    def __init__(self, results_root):
+        root = path.expanduser(results_root)
+        self.keyframes = read_keyframes(path.join(root, 'KeyFrameTrajectory.txt'), path.join(root, 'GPSTrajectory.txt'))
+        self.map_points = read_map_points(path.join(root, 'MapPoints.txt'))
+        self.gps_estimate = read_gps_estimate(path.join(root, 'GPSEstimates.txt'))
+
+
+def read_keyframes(keyframe_file, gps_file):
     """Reads a keyframe trajectory from a file.
     Args:
         filename: The name of the file to read.
@@ -84,6 +96,56 @@ def smooth_elevation(elevations):
     return (smoothed_state_means[:, 0], filtered_state_means[:, 0])
 
 # https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
+
+
+def lm_estimate_transform(A, B):
+    def error_function(x, src, dst):
+        # x[0:3] represents the translation vector
+        translation = x[0:3]
+
+        # x[3:6] represents the rotation vector (Rodrigues)
+        rotation = R.from_rotvec(x[3:6])
+
+        # x[6] represents the scale factor
+        scale = x[6]
+
+        # Apply the estimated rotation, translation, and scale to the source points
+        transformed_src = scale * rotation.apply(src) + translation
+
+        # Compute the difference (residual) between the transformed points and the destination points
+        residuals = transformed_src - dst
+
+        # Flatten the residuals to a 1D array
+        return residuals.flatten()
+
+    src_centroid = np.mean(A, axis=0)
+    dst_centroid = np.mean(B, axis=0)
+    src_points_normalized = A - src_centroid
+    dst_points_normalized = B - dst_centroid
+    src_scale = np.sqrt(np.sum(src_points_normalized**2) / len(src_points_normalized))
+    dst_scale = np.sqrt(np.sum(dst_points_normalized**2) / len(dst_points_normalized))
+    src_points_normalized /= src_scale
+    dst_points_normalized /= dst_scale
+
+    translation_init_guess = np.mean(B, axis=0) - np.mean(A, axis=0)
+    rotation_init_guess = np.array([0, 0, 0])
+    scale_init_guess = 1
+
+    # initial guess
+    # x0 = np.array([0, 0, 0, 0, 0, 0, 1])
+    x0 = np.concatenate((translation_init_guess, rotation_init_guess, [scale_init_guess]), axis=None)
+    result = least_squares(error_function, x0, args=(src_points_normalized, dst_points_normalized), method='lm')
+
+    optimal_translation_normalized = result.x[0:3]
+    optimal_rotation_normalized = R.from_rotvec(result.x[3:6])
+    optimal_scale_normalized = result.x[6]
+
+    # Extract the optimal translation, rotation, and scale parameters
+    Rot = optimal_rotation_normalized
+    c = optimal_scale_normalized * dst_scale / src_scale
+    t = dst_centroid - c * Rot.apply(src_centroid) + optimal_translation_normalized * dst_scale
+
+    return Rot.as_matrix(), c, t
 
 
 def kabsch_umeyama(A, B):
