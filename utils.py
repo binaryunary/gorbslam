@@ -8,16 +8,16 @@ from scipy.spatial.transform import Rotation as R
 
 
 class GPSPos:
-    def __init__(self, lat, lon, alt):
-        self.lat = lat
-        self.lon = lon
-        self.alt = alt
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
 
 
 class KeyFrame:
     def __init__(self, timestamp, gps, x, y, z, qx, qy, qz, qw):
         self.timestamp = timestamp
-        self.gps = gps
+        self.gps: GPSPos = gps
         self.x = x
         self.y = y
         self.z = z
@@ -34,7 +34,15 @@ class MapPoint:
         self.z = z
 
 
-def read_keyframe_trajectory(keyframe_file, gps_file):
+class ORBSLAMResults:
+    def __init__(self, results_root):
+        root = path.expanduser(results_root)
+        self.keyframes = read_keyframes(path.join(root, 'KeyFrameTrajectory.txt'), path.join(root, 'GPSTrajectory.txt'))
+        self.map_points = read_map_points(path.join(root, 'MapPoints.txt'))
+        self.gps_estimate = read_gps_estimate(path.join(root, 'GPSEstimates.txt'))
+
+
+def read_keyframes(keyframe_file: str, gps_file: str) -> list[KeyFrame]:
     """Reads a keyframe trajectory from a file.
     Args:
         filename: The name of the file to read.
@@ -51,7 +59,7 @@ def read_keyframe_trajectory(keyframe_file, gps_file):
     return keyframes
 
 
-def read_map_points(filename):
+def read_map_points(filename: str) -> list[MapPoint]:
     """Reads a list of map points from a file.
     Args:
         filename: The name of the file to read.
@@ -62,7 +70,7 @@ def read_map_points(filename):
         return [MapPoint(*map(float, line.split())) for line in f]
 
 
-def read_gps_estimate(filename):
+def read_gps_estimate(filename: str) -> list[GPSPos]:
     with open(filename, 'r') as f:
         return [GPSPos(*map(float, line.split())) for line in f]
 
