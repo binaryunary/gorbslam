@@ -98,7 +98,7 @@ def smooth_elevation(elevations):
 # https://zpl.fi/aligning-point-patterns-with-kabsch-umeyama-algorithm/
 
 
-def lm_estimate_transform(A, B):
+def lm_estimate_transform(source_points, dest_points):
     def error_function(x, src, dst):
         # x[0:3] represents the translation vector
         translation = x[0:3]
@@ -118,21 +118,20 @@ def lm_estimate_transform(A, B):
         # Flatten the residuals to a 1D array
         return residuals.flatten()
 
-    src_centroid = np.mean(A, axis=0)
-    dst_centroid = np.mean(B, axis=0)
-    src_points_normalized = A - src_centroid
-    dst_points_normalized = B - dst_centroid
+    src_centroid = np.mean(source_points, axis=0)
+    dst_centroid = np.mean(dest_points, axis=0)
+    src_points_normalized = source_points - src_centroid
+    dst_points_normalized = dest_points - dst_centroid
     src_scale = np.sqrt(np.sum(src_points_normalized**2) / len(src_points_normalized))
     dst_scale = np.sqrt(np.sum(dst_points_normalized**2) / len(dst_points_normalized))
     src_points_normalized /= src_scale
     dst_points_normalized /= dst_scale
 
-    translation_init_guess = np.mean(B, axis=0) - np.mean(A, axis=0)
+    translation_init_guess = [0, 0, 0]
     rotation_init_guess = np.array([0, 0, 0])
     scale_init_guess = 1
 
     # initial guess
-    # x0 = np.array([0, 0, 0, 0, 0, 0, 1])
     x0 = np.concatenate((translation_init_guess, rotation_init_guess, [scale_init_guess]), axis=None)
     result = least_squares(error_function, x0, args=(src_points_normalized, dst_points_normalized), method='lm')
 
@@ -224,3 +223,43 @@ def umeyama_alignment(x: np.ndarray, y: np.ndarray,
     t = mean_y - np.multiply(c, r.dot(mean_x))
 
     return r, t, c
+
+
+def helmert_transform(params, source_points):
+    tx, ty, tz, rx, ry, rz, s = params
+
+    # Rotation matrix from Euler angles
+    R_x = np.array([[1, 0, 0],
+                    [0, np.cos(rx), -np.sin(rx)],
+                    [0, np.sin(rx), np.cos(rx)]])
+
+    R_y = np.array([[np.cos(ry), 0, np.sin(ry)],
+                    [0, 1, 0],
+                    [-np.sin(ry), 0, np.cos(ry)]])
+
+    R_z = np.array([[np.cos(rz), -np.sin(rz), 0],
+                    [np.sin(rz), np.cos(rz), 0],
+                    [0, 0, 1]])
+
+    R = R_z @ R_y @ R_x
+    t = np.array([tx, ty, tz])
+
+    # Apply rotation, scaling, and translation
+    transformed_points = source_points @ (s * R.T) + t
+
+    return transformed_points, R, t, s
+
+
+def estimate_helmert_parameters(source_points, target_points):
+    def error_function(params, source_points, target_points):
+        transformed_points, R, t, s = helmert_transform(params, source_points)
+        residuals = transformed_points - target_points
+        return residuals.ravel()
+
+    # Initial guess
+    initial_params = np.array([300000, 600000, 30, 0, 0, 0, 40])
+
+    # Estimate parameters
+    result = least_squares(error_function, initial_params, args=(source_points, target_points), method='lm')
+
+    return result.x
