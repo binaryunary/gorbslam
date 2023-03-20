@@ -2,6 +2,8 @@ import typing
 from os import path
 
 import numpy as np
+from keras.layers import Dense
+from keras.models import Sequential
 from pykalman import KalmanFilter
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
@@ -263,3 +265,41 @@ def estimate_helmert_parameters(source_points, target_points):
     result = least_squares(error_function, initial_params, args=(source_points, target_points), method='lm')
 
     return result.x
+
+
+def fit_trajectory_nn(source_points, target_points):
+    assert source_points.shape == target_points.shape
+
+    n = 1  # Number of trajectory pairs, currently we only have one pair.
+    m = len(target_points)   # Number of points per trajectory
+
+    # Flatten the data for training
+    X = source_points.reshape(n, -1)
+    y = target_points.reshape(n, -1)
+
+    # Define the neural network architecture
+    model = Sequential()
+    model.add(Dense(256, activation='relu', input_shape=(m * 3,)))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(m * 3))
+
+    # Compile the model
+    model.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Train the model with your data
+    model.fit(X, y, epochs=500, batch_size=32)
+
+    return model
+
+
+def predict_trajectory_nn(model, source_points):
+    n = 1  # Number of trajectory pairs, currently we only have one pair.
+    m = len(source_points)  # Number of points per trajectory
+
+    # Flatten the data for training
+    X = source_points.reshape(n, -1)
+
+    # Predict the target trajectory
+    y = model.predict(X)
+
+    return y.reshape(m, 3)
