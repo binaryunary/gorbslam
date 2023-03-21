@@ -42,6 +42,7 @@ class ORBSLAMResults:
         self.keyframes = read_keyframes(path.join(root, 'KeyFrameTrajectory.txt'), path.join(root, 'GPSTrajectory.txt'))
         self.map_points = read_map_points(path.join(root, 'MapPoints.txt'))
         self.gps_estimate = read_gps_estimate(path.join(root, 'GPSEstimates.txt'))
+        self.slam_estimates = read_gps_estimate(path.join(root, 'SLAMEstimates.txt'))
 
 
 def read_keyframes(keyframe_file: str, gps_file: str) -> list[KeyFrame]:
@@ -267,7 +268,7 @@ def estimate_helmert_parameters(source_points, target_points):
     return result.x
 
 
-def fit_trajectory_nn(source_points, target_points):
+def fit_trajectory_nn(source_points, target_points, epochs=200, batch_size=32):
     assert source_points.shape == target_points.shape
 
     n = 1  # Number of trajectory pairs, currently we only have one pair.
@@ -287,7 +288,7 @@ def fit_trajectory_nn(source_points, target_points):
     model.compile(optimizer='adam', loss='mean_squared_error')
 
     # Train the model with your data
-    model.fit(X, y, epochs=500, batch_size=32)
+    model.fit(X, y, epochs=epochs, batch_size=batch_size)
 
     return model
 
