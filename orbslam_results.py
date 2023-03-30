@@ -73,12 +73,7 @@ class SLAMTrajectory:
 class ORBSLAMResults:
     def __init__(self, results_root):
         root = path.expanduser(results_root)
-
-        self.mapping = SLAMTrajectory(
-            read_kf_trajectory(path.join(root, 'kf_trajectory.txt')),
-            read_kf_trajectory_gt(path.join(root, 'kf_trajectory_gt.txt'))
-        )
-        self.map_points = read_map_points(path.join(root, 'map_points.txt'))
+        self.map_points, self.mapping = read_mapping_data(root)
         self.localization = read_localization_trajectories(root)
 
 
@@ -213,22 +208,50 @@ def read_gps_estimate(filename: str) -> list[GPSPos]:
         return [GPSPos(*map(float, line.split())) for line in f]
 
 
+def read_mapping_data(results_root):
+    mapping_files = glob.glob('m_*_*.txt', root_dir=results_root)
+    mapping_files.sort()
+    mapping_data = {}
+    map_sizes = {}
+    # Sort to get triplets of map points, SLAM trajectories and ground truths
+    # m_*_map_points.txt
+    # m_*_trajectory.txt
+    # m_*_trajectory_gt.txt
+    chunk = 3
+    for i in range(0, len(mapping_files), chunk):
+        mps, t, t_gt = mapping_files[i:i+chunk]
+        idx = int(t.split('_', 2)[1])
+
+        map_points = read_map_points(path.join(results_root, mps))
+        kf_trajectory = read_kf_trajectory(path.join(results_root, t))
+        kf_trajectory_gt = read_kf_trajectory_gt(path.join(results_root, t_gt))
+
+        map_size = kf_trajectory.shape[0] # number of KFs in a map
+        mapping_data[idx] = (map_points, SLAMTrajectory(kf_trajectory, kf_trajectory_gt))
+        map_sizes[map_size] = idx
+
+    # Get the index of the largest map
+    m = map_sizes[max(map_sizes.keys())]
+
+    # For now just return the largest map and associated data
+    return mapping_data[m]
+
 
 def read_localization_trajectories(results_root):
-    localized_trajectory_files = glob.glob('*_localized_trajectory*.txt', root_dir=results_root)
-    # Sort to get pairwise estimates and ground truths
-    localized_trajectory_files.sort()
+    localization_files = glob.glob('l_*_*.txt', root_dir=results_root)
+    # Sort to get pairs of estimates and ground truths
+    # l_*_trajectory.txt
+    # l_*_trajectory_gt.txt
+    localization_files.sort()
     localization_data = {}
 
     chunk = 2
-    for i in range(0, len(localized_trajectory_files), chunk):
-        t, t_gt = localized_trajectory_files[i:i+chunk]
-        idx = int(t.split('_', 1)[0])
+    for i in range(0, len(localization_files), chunk):
+        t, t_gt = localization_files[i:i+chunk]
+        idx = int(t.split('_', 2)[1])
         trajectory = read_trajectory(path.join(results_root, t))
         trajectory_gt = read_trajectory_gt(path.join(results_root, t_gt))
         localization_data[idx] = SLAMTrajectory(trajectory, trajectory_gt)
 
     return localization_data
-
-
 
