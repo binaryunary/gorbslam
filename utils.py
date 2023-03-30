@@ -1,7 +1,9 @@
 import typing
 from os import path
+from typing import List
 
 import numpy as np
+import plotly.graph_objects as go
 from keras.layers import Dense
 from keras.models import Sequential
 from pykalman import KalmanFilter
@@ -167,7 +169,7 @@ def kabsch_umeyama(A, B):
     c = VarA / np.trace(np.diag(D) @ S)
     t = EA - c * R @ EB
 
-    return R, c, t
+    return R, t, c
 
 
 UmeyamaResult = typing.Tuple[np.ndarray, np.ndarray, float]
@@ -229,7 +231,7 @@ def umeyama_alignment(x: np.ndarray, y: np.ndarray,
 
 
 def helmert_transform(params, source_points):
-    tx, ty, tz, rx, ry, rz, s = params
+    tx, ty, tz, rx, ry, rz, c = params
 
     # Rotation matrix from Euler angles
     R_x = np.array([[1, 0, 0],
@@ -248,9 +250,9 @@ def helmert_transform(params, source_points):
     t = np.array([tx, ty, tz])
 
     # Apply rotation, scaling, and translation
-    transformed_points = source_points @ (s * R.T) + t
+    transformed_points = source_points @ (c * R.T) + t
 
-    return transformed_points, R, t, s
+    return transformed_points, R, t, c
 
 
 def estimate_helmert_parameters(source_points, target_points):
@@ -304,3 +306,46 @@ def predict_trajectory_nn(model, source_points):
     y = model.predict(X)
 
     return y.reshape(m, 3)
+
+
+def reshape_data(points: np.ndarray, n_inputs: int) -> np.ndarray:
+    mod = points.size % n_inputs
+
+    if mod != 0:
+        rng = np.random.default_rng()
+        n_rows = points.shape[0]
+        rows_to_remove = mod // 3
+        return np.delete(points, rng.choice(n_rows, rows_to_remove, replace=False), axis=0).reshape(-1, n_inputs)
+
+    return np.array(points).reshape(-1, n_inputs)
+
+
+def denormalize(normalizer, data):
+    mean = normalizer.mean.numpy()
+    variance = normalizer.variance.numpy()
+    std = np.sqrt(variance)
+    return data * std + mean
+
+
+def create_scattermapbox(arr, name, color=None, bold=False, mode='markers'):
+    return go.Scattermapbox(
+        lat=arr[:,0],
+        lon=arr[:,1],
+        mode=mode,
+        line=dict(width=5) if bold else None,
+        marker=dict(color=color) if color else None,
+        name=name
+    )
+
+
+def plot(traces: List[go.Scattermapbox], center):
+    fig = go.Figure()
+    for trace in traces:
+        fig.add_trace(trace)
+
+    fig.update_geos(projection_type="transverse mercator")
+    fig.update_layout(mapbox_style="open-street-map",
+                      mapbox=dict(center=dict(lat=center[0], lon=center[1]), zoom=16),
+                      margin={"t": 20, "b": 0, "l": 0, "r": 0},
+                      height=1200)
+    fig.show()
