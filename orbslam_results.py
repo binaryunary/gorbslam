@@ -69,7 +69,6 @@ class SLAMTrajectory:
         self.trajectory_wgs = np.array([self.utm2wgs.transform(p[0], p[1], p[2])
                                            for p in value])
 
-
 class ORBSLAMResults:
     def __init__(self, results_root):
         root = path.expanduser(results_root)
@@ -96,7 +95,7 @@ class ORBSLAMTrajectoryProcessor:
         for localization in self.orbslam.localization.values():
             localization.trajectory_utm = self.predict_trajectory(localization.trajectory)
 
-    def _fit_trajectory(self, source_points, target_points, epochs=400, batch_size=32):
+    def _fit_trajectory(self, source_points, target_points, epochs=400, batch_size=8):
         assert source_points.shape == target_points.shape
 
         print(f"Training model with {source_points.shape}")
@@ -133,7 +132,7 @@ class ORBSLAMTrajectoryProcessor:
         # model.add(Dense(n_nodes, activation='tanh'))
         model.add(Dense(self.n_inputs))
 
-        optimizer = Adam(learning_rate=0.001)
+        optimizer = Adam()
         model.compile(optimizer=optimizer, loss='mean_squared_error')
 
         history = model.fit(X, y, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=True)
