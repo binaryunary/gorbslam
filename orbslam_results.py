@@ -3,14 +3,26 @@ from os import path
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
+import multiprocessing
 import pyproj
-from keras.layers import Dense, Normalization
+from keras.layers import Dense, Normalization, Dropout
 from keras.models import Sequential
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop
+from keras.losses import MeanSquaredError, Huber
+from kerastuner.tuners import RandomSearch, BayesianOptimization, Hyperband
+from kerastuner import Objective
 from keras.regularizers import L2
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
+from keras import Sequential
 
 from utils import denormalize, reshape_data, umeyama_alignment
+
+NUM_CORES = multiprocessing.cpu_count()
+
+# Instruct Keras to use all available CPU cores
+tf.config.threading.set_inter_op_parallelism_threads(NUM_CORES)
+tf.config.threading.set_intra_op_parallelism_threads(NUM_CORES)
 
 
 class GPSPos:
@@ -79,7 +91,7 @@ class ORBSLAMResults:
 class ORBSLAMTrajectoryProcessor:
     def __init__(self, orbslam_out_dir):
         self.orbslam = ORBSLAMResults(orbslam_out_dir)
-
+        self.trajectory_name = path.basename(orbslam_out_dir)
         self.n_inputs = 3 * 1
         self._source_normalizer = None
         self._target_normalizer = None
@@ -101,9 +113,12 @@ class ORBSLAMTrajectoryProcessor:
         print(f"Training model with {source_points.shape}")
         print(f"Target points: {target_points.shape}")
 
+        keras_logs_dir = 'keras_logs'
+
         callbacks = [
-            EarlyStopping(monitor='loss', patience=10),
-            ReduceLROnPlateau(monitor='val_loss', factor=0.2,patience=5, min_lr=0.001)
+            EarlyStopping(monitor='loss', patience=3),
+            TensorBoard(log_dir=keras_logs_dir),
+            # ReduceLROnPlateau(monitor='loss', factor=0.2,patience=5, min_lr=0.001)
         ]
 
         source = reshape_data(source_points, self.n_inputs)
@@ -121,21 +136,44 @@ class ORBSLAMTrajectoryProcessor:
         X = source_normalizer(source)
         y = target_normalizer(target)
 
-        regularizer = L2(l2=0.001)
+        # tuner = RandomSearch(
+        #     build_model,
+        #     objective='val_loss',
+        #     max_trials=100,
+        #     executions_per_trial=1,
+        #     directory='keras_tuner_logs',
+        #     project_name=self.trajectory_name
+        # )
+        tuner = BayesianOptimization(
+            build_model,
+            objective='loss',
+            max_trials=100,
+            num_initial_points=3,
+            alpha=0.01,
+            beta=2.6,
+            seed=None,
+            directory=keras_logs_dir,
+            project_name=self.trajectory_name,
+        )
+        # tuner = Hyperband(
+        #     hypermodel=build_model,
+        #     objective= Objective("loss", direction="min"),
+        #     max_epochs=100,
+        #     factor=3,
+        #     directory=keras_logs_dir,
+        #     project_name=self.trajectory_name
+        # )
 
-        n_nodes = 64
+        # Search for the best model
+        tuner.search(X, y, validation_split=0.2, callbacks=callbacks)
 
-        # Define the neural network architecture
-        model = Sequential()
-        model.add(Dense(n_nodes, activation='tanh', input_shape=(self.n_inputs,)))
-        # model.add(Dense(n_nodes, activation='tanh'))
-        # model.add(Dense(n_nodes, activation='tanh'))
-        model.add(Dense(self.n_inputs))
+        # Get the optimal hyperparameters
+        best_hps = tuner.get_best_hyperparameters(num_trials=3)[0]
 
-        optimizer = Adam()
-        model.compile(optimizer=optimizer, loss='mean_squared_error')
+        # Build the model with the optimal hyperparameters
+        model = tuner.hypermodel.build(best_hps)
 
-        history = model.fit(X, y, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=True)
+        model.fit(X, y, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=True)
 
         self._model = model
         self._source_normalizer = source_normalizer
@@ -254,3 +292,41 @@ def read_localization_trajectories(results_root):
 
     return localization_data
 
+
+def build_model(hp):
+    model = Sequential()
+
+    # Input layer
+    model.add(Dense(units=hp.Int('input_layer_units', min_value=16, max_value=256, step=16),
+                    activation=hp.Choice('input_layer_0_activation', values=['relu', 'selu', 'elu', 'tanh']),
+                    input_shape=(3,)))
+
+
+    num_hidden_layers = hp.Int('num_hidden_layers', 0, 5)
+    # Choose the number of hidden layers
+    for i in range(num_hidden_layers):
+        # Tune the number of nodes and activation function for each layer
+        model.add(Dense(units=hp.Int(f'hidden_layer_{i}_units', min_value=16, max_value=256, step=16),
+                        activation=hp.Choice(f'hidden_layer_{i}_activation', values=['relu', 'selu', 'elu', 'tanh'])))
+        # Tune whether to use dropout.
+        if hp.Boolean("dropout"):
+            model.add(Dropout(rate=hp.Choice(f'hidden_layer_{i}_dropout_rate', values=[0.5, 0.6, 0.7, 0.8])))
+
+    # Output layer
+    model.add(Dense(3))
+
+    # Tune the learning rate
+    learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+
+    optimizer = hp.Choice('optimizer', values=['adam', 'rmsprop'])
+    if optimizer == 'adam':
+        opt = Adam(learning_rate=learning_rate)
+    elif optimizer == 'rmsprop':
+        opt = RMSprop(learning_rate=learning_rate)
+
+    loss = hp.Choice('loss', values=['mean_squared_error', 'huber', 'mean_absolute_error', 'log_cosh'])
+
+    # Compile the model
+    model.compile(optimizer=opt, loss=loss)
+
+    return model

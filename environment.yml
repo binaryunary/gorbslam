@@ -99,8 +99,10 @@ dependencies:
   - kealib=1.5.0=hfd766a6_0
   - keras=2.11.0=pyhd8ed1ab_0
   - keras-preprocessing=1.1.2=pyhd8ed1ab_0
+  - keras-tuner=1.3.1=pyhd8ed1ab_0
   - kiwisolver=1.4.4=py310h313beb8_0
   - krb5=1.20.1=h69eda48_0
+  - kt-legacy=1.0.4=pyhd8ed1ab_0
   - lcms2=2.15=h481adae_0
   - lerc=4.0.0=h9a09cb3_0
   - libabseil=20220623.0=cxx17_h28b99d4_6
@@ -256,4 +258,24 @@ dependencies:
   - zipp=3.15.0=pyhd8ed1ab_0
   - zlib=1.2.13=h03a7124_4
   - zstd=1.5.2=h8574219_0
+  - pip:
+      - catkin==0.7.18
+      - catkin-pkg==0.5.2
+      - distro==1.8.0
+      - docutils==0.19
+      - genmsg==0.5.12
+      - genpy==0.6.14
+      - gnupg==2.3.1
+      - pycryptodome==3.17
+      - pycryptodomex==3.17
+      - pyyaml==6.0
+      - rosbag==1.15.11
+      - roscpp==1.15.11
+      - rosgraph==1.15.11
+      - rosgraph-msgs==1.11.3.post2
+      - roslib==1.14.7.post0
+      - roslz4==1.14.3.post2
+      - rospkg==1.5.0
+      - rospy==1.15.11
+      - std-msgs==0.5.13.post0
 prefix: /Users/erik/miniconda3/envs/gorbslam
