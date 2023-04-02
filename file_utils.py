@@ -1,7 +1,7 @@
 import glob
 from os import path
 import numpy as np
-from models import GPSPos, SLAMTrajectory, WorldPoint
+from models import GPSPos, MapPoint, SLAMTrajectory, WorldPoint
 
 
 def read_kf_trajectory(filename: str) -> np.array:
@@ -42,7 +42,7 @@ def read_map_points(filename: str) -> list[WorldPoint]:
     return read_trajectory(filename)
 
 
-def read_mapping_data(results_root):
+def read_mapping_data(results_root) -> tuple[list[MapPoint], SLAMTrajectory]:
     mapping_files = glob.glob('m_*_*.txt', root_dir=results_root)
     mapping_files.sort()
     mapping_data = {}
@@ -71,7 +71,7 @@ def read_mapping_data(results_root):
     return mapping_data[m]
 
 
-def read_localization_trajectories(results_root):
+def read_localization_trajectories(results_root) -> dict[int, SLAMTrajectory]:
     localization_files = glob.glob('l_*_*.txt', root_dir=results_root)
     # Sort to get pairs of estimates and ground truths
     # l_*_trajectory.txt

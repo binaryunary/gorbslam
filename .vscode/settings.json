@@ -5,6 +5,8 @@
     "keras",
     "ndarray",
     "orbslam",
-    "pyproj"
+    "pyproj",
+    "scattermapbox",
+    "umeyama"
   ]
 }

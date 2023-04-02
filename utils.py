@@ -24,3 +24,4 @@ def wgs2utm(trajectory_wgs: np.ndarray) -> np.ndarray:
     # Create transformer for WGS84 -> UTM35N
     wgs2utm = pyproj.Transformer.from_crs(4326, 32635)
     return np.array([wgs2utm.transform(p[0], p[1], p[2]) for p in trajectory_wgs])
+

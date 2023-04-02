@@ -14,9 +14,10 @@ from scipy.spatial.transform import Rotation as R
 
 @dataclass(frozen=True)
 class TraceColors:
-    gt = 'blue'
-    slam = 'red'
-    loc = ['dodgerblue', 'olive', 'orange']
+    gt = '#636EFA'
+    slam = '#EF553B'
+    slam_scaled = '#00CC96'
+    loc = ['#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
 
 
 def create_scattermapbox(arr, name, color=None, bold=False, mode='markers'):
@@ -47,7 +48,6 @@ def create_scatter(arr, name, color=None, bold=False, mode='markers'):
     return go.Scatter(
         x=arr[:,0],
         y=arr[:,1],
-        z=arr[:,2],
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color) if color else None,
@@ -55,19 +55,14 @@ def create_scatter(arr, name, color=None, bold=False, mode='markers'):
     )
 
 
-def create_2d_fig(traces: List[go.Scatter], title) -> go.Figure:
+def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
     fig = go.Figure()
     for trace in traces:
         fig.add_trace(trace)
 
     fig.update_layout(
         title=title,
-        xaxis_title="X",
-        yaxis_title="Y",
-        font=dict(
-            family="Courier New, monospace",
-            size=18,
-            color="#7f7f7f"
-        )
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        height=1200
     )
     return fig

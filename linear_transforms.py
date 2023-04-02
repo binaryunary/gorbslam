@@ -81,11 +81,9 @@ def kabsch_umeyama(A, B):
     return R, t, c
 
 
-UmeyamaResult = typing.Tuple[np.ndarray, np.ndarray, float]
-
 # https://github.com/MichaelGrupp/evo/blob/051e5bf63195172af58dc8256cc71618f079f224/evo/core/geometry.py#L35
 def umeyama_alignment(x: np.ndarray, y: np.ndarray,
-                      with_scale: bool = False) -> UmeyamaResult:
+                      with_scale: bool = False) -> tuple[np.ndarray, np.ndarray, float]:
     """
     Computes the least squares solution parameters of an Sim(m) matrix
     that minimizes the distance between a set of registered points.
@@ -197,3 +195,7 @@ def smooth_elevation(elevations):
     smoothed_state_means, smoothed_state_covariances = kf.smooth(elevations)
 
     return (smoothed_state_means[:, 0], filtered_state_means[:, 0])
+
+
+def linear_transform(trajectory: np.ndarray, R, t, c) -> np.ndarray:
+    return np.array([t + c * R @ p for p in trajectory])
