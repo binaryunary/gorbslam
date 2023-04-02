@@ -27,7 +27,7 @@ class SLAMHyperModel(HyperModel):
             self,
             overwrite=True,
             objective='val_loss',
-            max_trials=300,
+            max_trials=100,
             executions_per_trial=3,
             directory=self.log_root,
             project_name=self.project_name
