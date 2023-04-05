@@ -1,6 +1,8 @@
-from keras_tuner import HyperModel, HyperParameter
+from keras_tuner import HyperModel, HyperParameters
 from keras.layers import Dense, Normalization, Dropout
 from keras.models import Sequential
+
+from utils import assert_trajectory_shape
 
 
 class SLAMHyperModel(HyperModel):
@@ -12,7 +14,7 @@ class SLAMHyperModel(HyperModel):
         self.model = None
 
     def adapt_normalizers(self, slam_trajectory, gt_trajectory):
-        self.__assert_input_shape(slam_trajectory)
+        assert_trajectory_shape(slam_trajectory)
 
         self.source_normalizer = Normalization(input_shape=(3, ))
         self.source_normalizer.adapt(slam_trajectory)
@@ -20,7 +22,7 @@ class SLAMHyperModel(HyperModel):
         self.target_normalizer = Normalization(input_shape=(3, ))
         self.target_normalizer.adapt(gt_trajectory)
 
-    def build(self, hp: HyperParameter):
+    def build(self, hp: HyperParameters):
         model = Sequential()
 
         il_units = hp.Int('input_layer_units', min_value=8, max_value=256, step=8)

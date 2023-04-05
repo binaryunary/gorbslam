@@ -2,18 +2,16 @@ import os
 
 import numpy as np
 
-from file_utils import read_localization_trajectories, read_mapping_data
 from linear_transforms import linear_transform, umeyama_alignment
 from plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
-from slam_hypermodel import SLAMHyperModel
-from slam_model import SLAMModel
 from slam_model_handler import SLAMModelHandler
+from slam_trajectory import read_localization_data, read_mapping_data
 
 
 class ORBSLAMResults:
     def __init__(self, orbslam_results_dir):
         self.map_points, self.mapping = read_mapping_data(orbslam_results_dir)
-        self.localization = read_localization_trajectories(orbslam_results_dir)
+        self.localization = read_localization_data(orbslam_results_dir)
 
 
 class ORBSLAMProcessor:
@@ -45,6 +43,11 @@ class ORBSLAMProcessor:
         self.orbslam.mapping.trajectory_fitted_utm = self.model.predict(self.orbslam.mapping.trajectory)
         for localization in self.orbslam.localization.values():
             localization.trajectory_fitted_utm = self.model.predict(localization.trajectory)
+
+    def save_trajectories(self):
+        self.orbslam.mapping.save(self.processed_results_dir)
+        for localization in self.orbslam.localization.values():
+            localization.save(self.processed_results_dir)
 
     def create_map_plot(self):
         traces = [

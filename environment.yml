@@ -259,17 +259,23 @@ dependencies:
   - zlib=1.2.13=h03a7124_4
   - zstd=1.5.2=h8574219_0
   - pip:
+      - argcomplete==3.0.5
       - catkin==0.7.18
       - catkin-pkg==0.5.2
+      - colorama==0.4.6
       - distro==1.8.0
       - docutils==0.19
+      - evo==1.22.0
       - genmsg==0.5.12
       - genpy==0.6.14
       - gnupg==2.3.1
+      - lz4==4.3.2
+      - natsort==8.3.1
       - pycryptodome==3.17
       - pycryptodomex==3.17
       - pyyaml==6.0
       - rosbag==1.15.11
+      - rosbags==0.9.15
       - roscpp==1.15.11
       - rosgraph==1.15.11
       - rosgraph-msgs==1.11.3.post2
@@ -277,5 +283,9 @@ dependencies:
       - roslz4==1.14.3.post2
       - rospkg==1.5.0
       - rospy==1.15.11
+      - ruamel-yaml==0.17.21
+      - ruamel-yaml-clib==0.2.7
+      - seaborn==0.12.2
       - std-msgs==0.5.13.post0
+      - zstandard==0.20.0
 prefix: /Users/erik/miniconda3/envs/gorbslam

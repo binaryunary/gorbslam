@@ -1,19 +1,8 @@
 import json
+
 import numpy as np
 import pyproj
 
-
-# class NumpyEncoder(json.JSONEncoder):
-#     """ Special json encoder for numpy types """
-
-#     def default(self, obj):
-#         if isinstance(obj, np.integer):
-#             return int(obj)
-#         elif isinstance(obj, np.floating):
-#             return float(obj)
-#         elif isinstance(obj, np.ndarray):
-#             return obj.tolist()
-#         return json.JSONEncoder.default(self, obj)
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -50,3 +39,24 @@ def assert_trajectory_shape(trajectory: np.ndarray):
     assert trajectory.shape[1] == 3
 
 
+def replace_tum_xyz(tum_data: np.ndarray, xyz: np.ndarray) -> np.ndarray:
+    assert_trajectory_shape(xyz)
+    tum_data_copy = tum_data.copy()
+    tum_data_copy[:, 1:4] = xyz
+    return tum_data_copy
+
+
+def read_tum_file(filename: str) -> np.ndarray:
+    with open(filename, 'r') as file:
+        return np.array([tuple(map(float, line.split())) for line in file])
+
+
+def write_tum_file(filename: str, data: np.ndarray):
+    with open(filename, 'w') as file:
+        for row in data:
+            file.write(' '.join(map(str, row)) + '\n')
+
+
+def read_map_points(filename: str) -> np.ndarray:
+    with open(filename, 'r') as file:
+        return np.array([tuple(map(float, line.split())) for line in file])
