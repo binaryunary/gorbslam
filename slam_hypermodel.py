@@ -32,21 +32,22 @@ class SLAMHyperModel(HyperModel):
         num_hidden_layers = hp.Int('num_hidden_layers', 0, 3)
         # Choose the number of hidden layers
         for i in range(num_hidden_layers):
-          hl_units = hp.Int(f'hidden_layer_{i}_units', min_value=8, max_value=256, step=8)
-          hl_activation = hp.Choice(f'hidden_layer_{i}_activation', values=['relu', 'tanh'])
-          hl_is_regularizer = hp.Boolean(f'is_hidden_layer_{i}_kernel_regularizer', default=False)
-          hl_regularizer = None
-          if hl_is_regularizer:
-              hl_regularizer = hp.Choice(f'hidden_layer_{i}_kernel_regularizer', values=['l1', 'l2', 'l1_l2'])
+            hl_units = hp.Int(f'hidden_layer_{i}_units', min_value=8, max_value=256, step=8)
+            hl_activation = hp.Choice(f'hidden_layer_{i}_activation', values=['relu', 'tanh'])
+            hl_is_regularizer = hp.Boolean(f'is_hidden_layer_{i}_kernel_regularizer', default=False)
+            hl_regularizer = None
+            if hl_is_regularizer:
+                hl_regularizer = hp.Choice(f'hidden_layer_{i}_kernel_regularizer', values=['l1', 'l2', 'l1_l2'])
 
-          # Tune the number of nodes and activation function for each layer
-          model.add(Dense(units=hl_units, activation=hl_activation, kernel_regularizer='l2' if hl_is_regularizer else None))
-          model.add(Dense(units=hl_units, activation=hl_activation))
+            # Tune the number of nodes and activation function for each layer
+            model.add(Dense(units=hl_units, activation=hl_activation,
+                      kernel_regularizer='l2' if hl_is_regularizer else None))
+            model.add(Dense(units=hl_units, activation=hl_activation))
 
-          # Add dropout to hidden layers
-          hl_is_dropout = hp.Boolean(f'hidden_layer_{i}_dropout', default=False)
-          if hl_is_dropout  and i < num_hidden_layers - 1: # don't add dropout to the last hidden layer before the output
-              model.add(Dropout(rate=hp.Choice(f'hidden_layer_{i}_dropout_rate', values=[0.5, 0.6, 0.7, 0.8])))
+            # Add dropout to hidden layers
+            hl_is_dropout = hp.Boolean(f'hidden_layer_{i}_dropout', default=False)
+            if hl_is_dropout and i < num_hidden_layers - 1:  # don't add dropout to the last hidden layer before the output
+                model.add(Dropout(rate=hp.Choice(f'hidden_layer_{i}_dropout_rate', values=[0.5, 0.6, 0.7, 0.8])))
 
         # Output layer
         model.add(Dense(3))

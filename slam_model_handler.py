@@ -32,7 +32,7 @@ class SLAMModelHandler:
             hypermodel,
             overwrite=True,
             objective='val_loss',
-            max_trials=5,
+            max_trials=200,
             executions_per_trial=2,
             directory=self.model_dir,
             project_name='keras_log'
@@ -73,11 +73,11 @@ class SLAMModelHandler:
             json.dump(normalizers_config, f)
 
     def _denormalize(self, data):
-      variance = self.target_normalizer.variance.numpy()
-      mean = self.target_normalizer.mean.numpy()
-      std = np.sqrt(variance)
+        variance = self.target_normalizer.variance.numpy()
+        mean = self.target_normalizer.mean.numpy()
+        std = np.sqrt(variance)
 
-      return data * std + mean
+        return data * std + mean
 
     def load_model(self):
         if not path.exists(self.model_path) or not path.exists(self.normalizers_path):
@@ -101,7 +101,6 @@ class SLAMModelHandler:
         self._train_model(source_trajectory, target_trajectory)
         self._save_model()
 
-
     def predict(self, slam_trajectory):
         predicted_trajectory_norm = self.model.predict(self.source_normalizer(slam_trajectory))
 
@@ -109,11 +108,10 @@ class SLAMModelHandler:
         return self._denormalize(predicted_trajectory_norm)
 
 
-
 def serialize_normalizer(normalizer):
     return {
         'mean': normalizer.mean.numpy(),
-        'variance':normalizer.variance.numpy()
+        'variance': normalizer.variance.numpy()
     }
 
 
