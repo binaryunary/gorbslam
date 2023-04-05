@@ -1,6 +1,8 @@
 {
   "cSpell.words": [
+    "asarray",
     "denormalize",
+    "hypermodel",
     "hyperparameters",
     "keras",
     "ndarray",

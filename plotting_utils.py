@@ -31,7 +31,7 @@ def create_scattermapbox(arr, name, color=None, bold=False, mode='markers'):
     )
 
 
-def create_map_fig(traces: List[go.Scattermapbox], center) -> go.Figure:
+def create_map_fig(traces: List[go.Scattermapbox], center, title=None) -> go.Figure:
     fig = go.Figure()
     for trace in traces:
         fig.add_trace(trace)
@@ -40,7 +40,8 @@ def create_map_fig(traces: List[go.Scattermapbox], center) -> go.Figure:
     fig.update_layout(mapbox_style="open-street-map",
                       mapbox=dict(center=dict(lat=center[0], lon=center[1]), zoom=16),
                       margin={"t": 20, "b": 0, "l": 0, "r": 0},
-                      height=1200)
+                      height=1200,
+                      title=title)
     return fig
 
 
@@ -50,7 +51,17 @@ def create_scatter(arr, name, color=None, bold=False, mode='markers'):
         y=arr[:,1],
         mode=mode,
         line=dict(width=5) if bold else None,
-        marker=dict(color=color) if color else None,
+        marker=dict(color=color, size=3) if color else None,
+        name=name
+    )
+
+def create_slam_scatter(arr, name, color=None, bold=False, mode='markers'):
+    return go.Scatter(
+        x=arr[:,0],
+        y=arr[:,2],
+        mode=mode,
+        line=dict(width=5) if bold else None,
+        marker=dict(color=color, size=3) if color else None,
         name=name
     )
 

@@ -1,5 +1,25 @@
+import json
 import numpy as np
 import pyproj
+
+
+# class NumpyEncoder(json.JSONEncoder):
+#     """ Special json encoder for numpy types """
+
+#     def default(self, obj):
+#         if isinstance(obj, np.integer):
+#             return int(obj)
+#         elif isinstance(obj, np.floating):
+#             return float(obj)
+#         elif isinstance(obj, np.ndarray):
+#             return obj.tolist()
+#         return json.JSONEncoder.default(self, obj)
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 def reshape_input(points: np.ndarray, n_inputs: int) -> np.ndarray:
@@ -24,4 +44,9 @@ def wgs2utm(trajectory_wgs: np.ndarray) -> np.ndarray:
     # Create transformer for WGS84 -> UTM35N
     wgs2utm = pyproj.Transformer.from_crs(4326, 32635)
     return np.array([wgs2utm.transform(p[0], p[1], p[2]) for p in trajectory_wgs])
+
+
+def assert_trajectory_shape(trajectory: np.ndarray):
+    assert trajectory.shape[1] == 3
+
 
