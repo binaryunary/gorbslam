@@ -1,11 +1,13 @@
 import os
 
 import numpy as np
+import shutil
 
 from linear_transforms import linear_transform, umeyama_alignment
 from plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
 from slam_model_handler import SLAMModelHandler
 from slam_trajectory import read_localization_data, read_mapping_data
+from utils import downsample
 
 
 class ORBSLAMResults:
@@ -24,7 +26,7 @@ class ORBSLAMProcessor:
             os.makedirs(self.processed_results_dir, exist_ok=True)
 
         self.orbslam = ORBSLAMResults(self.orbslam_results_dir)
-        self.model = SLAMModelHandler(self.processed_results_dir)
+        self.model = SLAMModelHandler(self.processed_results_dir, '/Users/erik/projects/gorbslam/keras_logs')
 
         self._scale_align_trajectories()
 
@@ -35,9 +37,10 @@ class ORBSLAMProcessor:
         for localization in self.orbslam.localization.values():
             localization.trajectory_scaled_utm = linear_transform(localization.trajectory, R, t, c)
 
-    def initialize_model(self):
-        if not self.model.load_model():
-            self.model.create_model(self.orbslam.mapping.trajectory, self.orbslam.mapping.trajectory_gt_utm)
+    def initialize_model(self, overwrite=False):
+        if overwrite or not self.model.load_model():
+            self.model.create_model(self.orbslam.mapping.trajectory, self.orbslam.mapping.trajectory_gt_utm,
+                                    self.orbslam.localization[0].trajectory, self.orbslam.localization[0].trajectory_gt_utm)
 
     def fit_trajectories(self):
         self.orbslam.mapping.trajectory_fitted_utm = self.model.predict(self.orbslam.mapping.trajectory)
@@ -71,9 +74,9 @@ class ORBSLAMProcessor:
     def create_2d_plot_utm(self):
         traces = [
             create_scatter(self.orbslam.mapping.trajectory_gt_utm,
-                           'GPS (ground truth)', color=TraceColors.gt, mode='lines'),
+                           'GPS (ground truth)', color=TraceColors.gt, mode='markers'),
             create_scatter(self.orbslam.mapping.trajectory_fitted_utm,
-                           'fitted SLAM (mapping)', color=TraceColors.slam, mode='lines'),
+                           'fitted SLAM (mapping)', color=TraceColors.slam, mode='markers'),
             create_scatter(self.orbslam.mapping.trajectory_scaled_utm, 'Umeyama SLAM (mapping)',
                            color=TraceColors.slam_scaled, mode='lines'),
         ]

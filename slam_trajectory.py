@@ -2,7 +2,7 @@ import glob
 from os import path
 
 import numpy as np
-from utils import read_map_points, read_tum_file, write_tum_file
+from utils import downsample, read_map_points, read_tum_file, write_tum_file
 from utils import replace_tum_xyz, utm2wgs, wgs2utm
 
 

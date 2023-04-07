@@ -1,26 +1,38 @@
 import json
+import math
 from os import path
 
 import numpy as np
 from slam_hypermodel import SLAMHyperModel
 from keras.models import load_model
 from keras.layers import Normalization
-from keras.callbacks import EarlyStopping
-from keras_tuner import RandomSearch
+from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau, ModelCheckpoint
+from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
+from keras_tuner import Objective
 
-from utils import NumpyEncoder
+from utils import NumpyEncoder, downsample
 
 
 class SLAMModelHandler:
-    def __init__(self, model_dir):
+    def __init__(self, model_dir, keras_logs_dir):
         self.model_dir = model_dir
+        self.project_name = path.basename(path.dirname(model_dir)) # TODO: Find a cleaner way to do this
+        self.keras_logs_dir = keras_logs_dir
         self.model_path = path.join(self.model_dir, 'model.keras')
         self.normalizers_path = path.join(self.model_dir, 'normalizers.json')
         self.source_normalizer = None
         self.source_normalizer = None
+        self.best_hps = None
         self.model = None
+        self.callbacks = [
+            EarlyStopping(monitor='val_euclidean_distance', patience=10, verbose=1),
+            ReduceLROnPlateau(monitor='val_euclidean_distance', factor=0.2, patience=5, verbose=1, min_lr=1e-7),
+            TensorBoard(log_dir=self.keras_logs_dir),
+            #  ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
+        ]
 
-    def _search_model(self, source_trajectory, target_trajectory):
+
+    def _search_model(self, source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory):
         # Create and configure normalizers
         self.source_normalizer = Normalization(input_shape=(3,))
         self.source_normalizer.adapt(source_trajectory)
@@ -28,37 +40,67 @@ class SLAMModelHandler:
         self.target_normalizer.adapt(target_trajectory)
 
         hypermodel = SLAMHyperModel()
-        tuner = RandomSearch(
+        # tuner = RandomSearch(
+        #     hypermodel,
+        #     overwrite=True,
+        #     # objective='val_loss',
+        #     objective=Objective('val_euclidean_distance', direction='min'),
+        #     max_trials=100,
+        #     executions_per_trial=1,
+        #     directory=self.model_dir,
+        #     project_name=self.project_name
+        # )
+
+        tuner = BayesianOptimization(
             hypermodel,
             overwrite=True,
-            objective='val_loss',
-            max_trials=200,
-            executions_per_trial=2,
-            directory=self.model_dir,
-            project_name='keras_log'
+            # objective='val_loss',
+            objective=Objective('val_euclidean_distance', direction='min'),
+            max_trials=100,
+            directory=self.keras_logs_dir,
+            project_name=self.project_name
         )
 
-        callbacks = [
-            EarlyStopping(monitor='loss', patience=2),
-        ]
+        # tuner = Hyperband(
+        #     hypermodel,
+        #     overwrite=True,
+        #     # objective='val_loss',
+        #     objective=Objective('val_euclidean_distance', direction='min'),
+        #     max_epochs=210,
+        #     factor=3,
+        #     seed=42,
+        # )
 
-        X = self.source_normalizer(source_trajectory)
-        y = self.target_normalizer(target_trajectory)
+        # Downsample data to speed up hp search
+        n_data  = math.ceil(source_trajectory.shape[0] * 0.6)
+        # n_data  = math.ceil(source_trajectory.shape[0] * 1.0)
+        # slam = downsample(normalized_slam, n_data)
+        # gt = downsample(normalized_gt, n_data)
 
-        tuner.search(X, y, validation_split=0.2, callbacks=callbacks)
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+        slam = self.source_normalizer(downsample(source_trajectory, n_data))
+        gt = self.target_normalizer(downsample(target_trajectory, n_data))
+        val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
+        val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
 
-        self.model = tuner.hypermodel.build(best_hps)
+        # tuner.search(slam, gt, validation_data=(val_slam, val_gt), callbacks=callbacks)
+        tuner.search(slam, gt, validation_data=(val_slam, val_gt), epochs=100, callbacks=self.callbacks)
+        self.best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
 
-    def _train_model(self, source_trajectory, target_trajectory, epochs=100, batch_size=32):
-        callbacks = [
-            EarlyStopping(monitor='loss', patience=2),
-        ]
+        self.model = hypermodel.build(self.best_hps)
 
-        X = self.source_normalizer(source_trajectory)
-        y = self.target_normalizer(target_trajectory)
+    def _train_model(self, source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory):
+        slam = self.source_normalizer(source_trajectory)
+        gt = self.target_normalizer(target_trajectory)
 
-        self.model.fit(X, y, callbacks=callbacks, epochs=epochs, batch_size=batch_size, verbose=True)
+        n_data = source_trajectory.shape[0]
+
+        val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
+        val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
+
+
+        # best_epochs = self.best_hps.get('epochs')
+        best_batch_size = self.best_hps.get('batch_size')
+        self.model.fit(slam, gt, validation_data=(val_slam, val_gt), callbacks=self.callbacks, epochs=200, batch_size=best_batch_size, verbose=True)
 
     def _save_model(self):
         self.model.save(self.model_path, save_format='keras')
@@ -96,9 +138,9 @@ class SLAMModelHandler:
 
         return True
 
-    def create_model(self, source_trajectory, target_trajectory):
-        self._search_model(source_trajectory, target_trajectory)
-        self._train_model(source_trajectory, target_trajectory)
+    def create_model(self, source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory):
+        self._search_model(source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory)
+        self._train_model(source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory)
         self._save_model()
 
     def predict(self, slam_trajectory):

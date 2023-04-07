@@ -12,5 +12,5 @@
     "umeyama"
   ],
   "python.linting.enabled": true,
-  "python.analysis.typeCheckingMode": "basic"
+  "python.analysis.typeCheckingMode": "off"
 }

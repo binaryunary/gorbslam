@@ -23,6 +23,12 @@ def reshape_input(points: np.ndarray, n_inputs: int) -> np.ndarray:
     return np.array(points).reshape(-1, n_inputs)
 
 
+def downsample(data: np.ndarray, n: int) -> np.ndarray:
+    downsampled_indices = np.linspace(0, data.shape[0] - 1, n, dtype=int)
+    downsampled_data = data[downsampled_indices]
+    return downsampled_data
+
+
 def utm2wgs(trajectory_utm: np.ndarray) -> np.ndarray:
     # Create transformer for UTM35N -> WGS84
     utm2wgs = pyproj.Transformer.from_crs(32635, 4326)
@@ -60,3 +66,5 @@ def write_tum_file(filename: str, data: np.ndarray):
 def read_map_points(filename: str) -> np.ndarray:
     with open(filename, 'r') as file:
         return np.array([tuple(map(float, line.split())) for line in file])
+
+
