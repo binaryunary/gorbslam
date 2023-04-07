@@ -25,8 +25,8 @@ class SLAMModelHandler:
         self.best_hps = None
         self.model = None
         self.callbacks = [
-            EarlyStopping(monitor='val_euclidean_distance', patience=10, verbose=1),
-            ReduceLROnPlateau(monitor='val_euclidean_distance', factor=0.2, patience=5, verbose=1, min_lr=1e-7),
+            EarlyStopping(monitor='val_loss', patience=10, verbose=1),
+            ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, verbose=1, min_lr=1e-7),
             TensorBoard(log_dir=self.keras_logs_dir),
             #  ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
         ]
@@ -51,41 +51,35 @@ class SLAMModelHandler:
         #     project_name=self.project_name
         # )
 
-        tuner = BayesianOptimization(
-            hypermodel,
-            overwrite=True,
-            # objective='val_loss',
-            objective=Objective('val_euclidean_distance', direction='min'),
-            max_trials=100,
-            directory=self.keras_logs_dir,
-            project_name=self.project_name
-        )
-
-        # tuner = Hyperband(
+        # tuner = BayesianOptimization(
         #     hypermodel,
         #     overwrite=True,
-        #     # objective='val_loss',
-        #     objective=Objective('val_euclidean_distance', direction='min'),
-        #     max_epochs=210,
-        #     factor=3,
-        #     seed=42,
+        #     objective='val_loss',
+        #     # objective=Objective('val_euclidean_distance', direction='min'),
+        #     max_trials=100,
+        #     directory=self.keras_logs_dir,
+        #     project_name=self.project_name
         # )
+
+        tuner = Hyperband(
+            hypermodel,
+            overwrite=True,
+            objective='val_loss',
+            # objective=Objective('val_euclidean_distance', direction='min'),
+            max_epochs=210,
+            factor=3,
+            seed=42,
+        )
 
         # Downsample data to speed up hp search
         n_data  = math.ceil(source_trajectory.shape[0] * 0.6)
-        # n_data  = math.ceil(source_trajectory.shape[0] * 1.0)
-        # slam = downsample(normalized_slam, n_data)
-        # gt = downsample(normalized_gt, n_data)
-
         slam = self.source_normalizer(downsample(source_trajectory, n_data))
         gt = self.target_normalizer(downsample(target_trajectory, n_data))
         val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
         val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
 
-        # tuner.search(slam, gt, validation_data=(val_slam, val_gt), callbacks=callbacks)
         tuner.search(slam, gt, validation_data=(val_slam, val_gt), epochs=100, callbacks=self.callbacks)
         self.best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-
         self.model = hypermodel.build(self.best_hps)
 
     def _train_model(self, source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory):

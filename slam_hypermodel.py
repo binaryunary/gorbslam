@@ -107,7 +107,7 @@ class SLAMHyperModel(HyperModel):
 
         # Compile the model
         # model.compile(optimizer=optimizer, loss=loss, metrics=[euclidean_distance])
-        model.compile(optimizer='adam', loss=loss, metrics=[euclidean_distance])
+        model.compile(optimizer='adam', loss=loss)
 
         return model
 
@@ -116,13 +116,6 @@ class SLAMHyperModel(HyperModel):
         batch_size = hp.Choice('batch_size', values=[32, 64, 128, 256, 512])
         return model.fit(X, y, batch_size=batch_size, **kwargs)
 
-
-def euclidean_distance(y_true, y_pred):
-    # using tf.reduce_mean(euclidean_distance) instead of euclidean_distance directly
-    # would give you the average distance between the true and predicted values across
-    # all points in the batch, rather than the average distance for each point
-    # in the batch separately.
-    return tf.reduce_mean(K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1)))
 
 
 
