@@ -28,7 +28,6 @@ class SLAMModelHandler:
             EarlyStopping(monitor='val_loss', patience=10, verbose=1),
             ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, verbose=1, min_lr=1e-7),
             TensorBoard(log_dir=self.keras_logs_dir),
-            #  ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
         ]
 
 
@@ -40,27 +39,6 @@ class SLAMModelHandler:
         self.target_normalizer.adapt(target_trajectory)
 
         hypermodel = SLAMHyperModel()
-        # tuner = RandomSearch(
-        #     hypermodel,
-        #     overwrite=True,
-        #     # objective='val_loss',
-        #     objective=Objective('val_euclidean_distance', direction='min'),
-        #     max_trials=100,
-        #     executions_per_trial=1,
-        #     directory=self.model_dir,
-        #     project_name=self.project_name
-        # )
-
-        # tuner = BayesianOptimization(
-        #     hypermodel,
-        #     overwrite=True,
-        #     objective='val_loss',
-        #     # objective=Objective('val_euclidean_distance', direction='min'),
-        #     max_trials=100,
-        #     directory=self.keras_logs_dir,
-        #     project_name=self.project_name
-        # )
-
         tuner = Hyperband(
             hypermodel,
             overwrite=True,
@@ -69,19 +47,16 @@ class SLAMModelHandler:
             max_epochs=210,
             factor=3,
             seed=42,
+            directory=self.keras_logs_dir,
+            project_name=self.project_name
         )
 
         # Downsample data to speed up hp search
         n_data  = math.ceil(source_trajectory.shape[0] * 0.6)
         train_slam = downsample(source_trajectory, n_data)
         train_gt = downsample(target_trajectory, n_data)
-
-        training, validation, testing = create_training_splits((train_slam, train_gt), (val_source_trajectory, val_target_trajectory), 0.2)
-
-        # slam = self.source_normalizer(downsample(source_trajectory, n_data))
-        # gt = self.target_normalizer(downsample(target_trajectory, n_data))
-        # val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
-        # val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
+        training, validation, testing = create_training_splits((train_slam, train_gt),
+                                                               (val_source_trajectory, val_target_trajectory), 0.2)
 
         slam = self.source_normalizer(training[0])
         gt = self.target_normalizer(training[1])
@@ -102,14 +77,6 @@ class SLAMModelHandler:
         val_slam = self.source_normalizer(validation[0])
         val_gt = self.target_normalizer(validation[1])
 
-        # n_data = source_trajectory.shape[0]
-        # slam = self.source_normalizer(source_trajectory)
-        # gt = self.target_normalizer(target_trajectory)
-        # val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
-        # val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
-
-
-        # best_epochs = self.best_hps.get('epochs')
         best_batch_size = self.best_hps.get('batch_size')
         self.model.fit(slam, gt, validation_data=(val_slam, val_gt), callbacks=self.callbacks, epochs=200, batch_size=best_batch_size, verbose=True)
 

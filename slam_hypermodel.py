@@ -12,8 +12,6 @@ from utils import assert_trajectory_shape
 
 class SLAMHyperModel(HyperModel):
     def __init__(self):
-        # self.project_name = project_name
-        # self.log_root = log_root
         self.source_normalizer = None
         self.target_normalizer = None
         self.model = None
@@ -30,17 +28,15 @@ class SLAMHyperModel(HyperModel):
     def build(self, hp: HyperParameters):
         model = Sequential()
 
-        # il_units = hp.Choice('il_units', values=[16, 32, 64, 128, 256])
+        # Input layer
         il_units = hp.Int('il_units', min_value=16, max_value=256, sampling='log')
         il_activation = hp.Choice('il_activation', values=['relu', 'tanh'])
-
-        # Input layer
         model.add(Dense(units=il_units, activation=il_activation, input_shape=(3,)))
 
-        hl_num = hp.Int('num_hidden_layers', 0, 5)
         # Choose the number of hidden layers
+        hl_num = hp.Int('num_hidden_layers', 0, 5)
         for i in range(hl_num):
-            # hl_units = hp.Choice(f'hl_{i}_units', values=[16, 32, 64, 128, 256])
+            # ith hidden layer
             hl_units = hp.Int(f'hl_{i}_units', min_value=16, max_value=256, sampling='log')
             hl_activation = hp.Choice(f'hl_{i}_activation', values=['relu', 'tanh'])
             hl_is_regularizer = hp.Boolean(f'hl_{i}_is_regularizer', default=False)
@@ -51,62 +47,13 @@ class SLAMHyperModel(HyperModel):
             # Tune the number of nodes and activation function for each layer
             model.add(Dense(units=hl_units, activation=hl_activation))
 
-            # Add dropout to hidden layers
-            # hl_is_dropout = hp.Boolean(f'hl_{i}_is_dropout', default=False)
-            # if hl_is_dropout and i < hl_num - 1:  # don't add dropout to the last hidden layer before the output
-            #     model.add(Dropout(rate=hp.Choice(f'hl_{i}_dropout_rate', values=[0.5, 0.6, 0.7, 0.8])))
-
         # Output layer
         model.add(Dense(3))
-
-        # Choose the optimizer
-        # optimizer_name = hp.Choice('optimizer', ['sgd', 'rmsprop', 'adam', 'adamax', 'nadam'])
-
-        # if optimizer_name == 'sgd':
-        #     optimizer = SGD(
-        #         learning_rate=hp.Float('sgd_learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG'),
-        #         momentum=hp.Float('sgd_momentum', min_value=0.0, max_value=0.9, step=0.1),
-        #         nesterov=hp.Boolean('sgd_nesterov', default=False)
-        #     )
-        # elif optimizer_name == 'rmsprop':
-        #     optimizer = RMSprop(
-        #         learning_rate=hp.Float('rmsprop_learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG'),
-        #         rho=hp.Float('rmsprop_rho', min_value=0.8, max_value=0.99, step=0.01)
-        #     )
-        # elif optimizer_name == 'adam':
-        #     optimizer = Adam(
-        #         learning_rate=hp.Float('adam_learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG'),
-        #         beta_1=hp.Float('adam_beta_1', min_value=0.8, max_value=0.99, step=0.01),
-        #         beta_2=hp.Float('adam_beta_2', min_value=0.9, max_value=0.999, step=0.001)
-        #     )
-        # elif optimizer_name == 'adamax':
-        #     optimizer = Adamax(
-        #         learning_rate=hp.Float('adamax_learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG'),
-        #         beta_1=hp.Float('adamax_beta_1', min_value=0.8, max_value=0.99, step=0.01),
-        #         beta_2=hp.Float('adamax_beta_2', min_value=0.9, max_value=0.999, step=0.001)
-        #     )
-        # elif optimizer_name == 'nadam':
-        #     optimizer = Nadam(
-        #         learning_rate=hp.Float('nadam_learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG'),
-        #         beta_1=hp.Float('nadam_beta_1', min_value=0.8, max_value=0.99, step=0.01),
-        #         beta_2=hp.Float('nadam_beta_2', min_value=0.9, max_value=0.999, step=0.001)
-        #     )
-
-         # Choose the loss function
-        # loss_function = hp.Choice('loss_function', ['log_cosh', 'huber'])
-
-        # Huber loss requires a delta value, so we need to include it when using Huber loss
-        # if loss_function == 'huber':
-        #     huber_delta = hp.Float('huber_delta', min_value=0.1, max_value=1.0, step=0.1)
-        #     loss = Huber(delta=huber_delta)
-        # else:
-        #     loss = loss_function
 
         huber_delta = hp.Float('huber_delta', min_value=0.1, max_value=1.0, step=0.1)
         loss = Huber(delta=huber_delta)
 
         # Compile the model
-        # model.compile(optimizer=optimizer, loss=loss, metrics=[euclidean_distance])
         model.compile(optimizer='adam', loss=loss)
 
         return model
@@ -117,5 +64,5 @@ class SLAMHyperModel(HyperModel):
         return model.fit(X, y, batch_size=batch_size, **kwargs)
 
 
-
-
+def euclidean_distance(y_true, y_pred):
+    return tf.reduce_mean(K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1)))
