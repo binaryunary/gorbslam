@@ -4,6 +4,9 @@ import math
 import numpy as np
 import pyproj
 
+from evo.core import metrics, sync, trajectory, lie_algebra
+import evo.tools.file_interface
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -85,3 +88,29 @@ def read_map_points(filename: str) -> np.ndarray:
         return np.array([tuple(map(float, line.split())) for line in file])
 
 
+# Convert the data to PoseTrajectory3D objects
+def create_trajectory_from_array(data: np.ndarray) -> trajectory.PoseTrajectory3D:
+    stamps = data[:, 0]  # n x 1
+    xyz = data[:, 1:4]  # n x 3
+    quat = data[:, 4:]  # n x 4
+    quat = np.roll(quat, 1, axis=1)  # shift 1 column -> w in front column
+
+    return trajectory.PoseTrajectory3D(xyz, quat, stamps)
+
+
+def calculate_ape(trajectory: trajectory.PoseTrajectory3D, trajectory_gt: trajectory.PoseTrajectory3D) -> metrics.APE:
+    # Synchronize the two trajectories based on timestamps
+    max_diff = 0.01  # Maximum timestamp difference for synchronization (e.g., 10 ms)
+    synced_ground_truth_traj, synced_estimated_traj = sync.associate_trajectories(trajectory_gt, trajectory, max_diff)
+
+    # Align the estimated trajectory to the ground truth trajectory (only needed for ATE)
+    # aligned_estimated_traj = trajectory.align(synced_estimated_traj, synced_ground_truth_traj, correct_scale=False, correct_only_scale=False)
+
+    # Calculate Absolute Trajectory Error (ATE)
+    ate_metric = metrics.APE(metrics.PoseRelation.translation_part)
+    ate_metric.process_data((synced_ground_truth_traj, synced_estimated_traj))
+
+    # You can also use other statistics types (mean, median, etc.)
+    ate_stats = ate_metric.get_statistic(metrics.StatisticsType.rmse)
+
+    return ate_metric
