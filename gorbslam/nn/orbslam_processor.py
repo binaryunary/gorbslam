@@ -2,12 +2,12 @@ import os
 
 import numpy as np
 import shutil
+from gorbslam.common.linear_transforms import linear_transform, umeyama_alignment
+from gorbslam.common.plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
+from gorbslam.nn.slam_model_handler import SLAMModelHandler
 
-from linear_transforms import linear_transform, umeyama_alignment
-from plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
-from slam_model_handler import SLAMModelHandler
-from slam_trajectory import read_localization_data, read_mapping_data
-from utils import downsample
+from gorbslam.nn.slam_trajectory import read_localization_data, read_mapping_data
+
 
 
 class ORBSLAMResults:

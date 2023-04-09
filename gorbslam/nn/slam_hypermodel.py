@@ -6,8 +6,9 @@ from keras.losses import Huber
 from keras import backend as K
 import tensorflow as tf
 
+from gorbslam.common.utils import assert_trajectory_shape
 
-from utils import assert_trajectory_shape
+
 
 
 class SLAMHyperModel(HyperModel):

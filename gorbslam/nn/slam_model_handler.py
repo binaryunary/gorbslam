@@ -3,14 +3,16 @@ import math
 from os import path
 
 import numpy as np
-from slam_hypermodel import SLAMHyperModel
+
+from gorbslam.common.utils import NumpyEncoder, create_training_splits, downsample
 from keras.models import load_model
 from keras.layers import Normalization
 from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau, ModelCheckpoint
 from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 from keras_tuner import Objective
 
-from utils import NumpyEncoder, create_training_splits, downsample
+from gorbslam.nn.slam_hypermodel import SLAMHyperModel
+
 
 
 class SLAMModelHandler:
