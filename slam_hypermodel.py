@@ -29,7 +29,7 @@ class SLAMHyperModel(HyperModel):
         model = Sequential()
 
         # Input layer
-        il_units = hp.Int('il_units', min_value=16, max_value=256, sampling='log')
+        il_units = hp.Int('il_units', min_value=16, max_value=1024, sampling='log')
         il_activation = hp.Choice('il_activation', values=['relu', 'tanh'])
         model.add(Dense(units=il_units, activation=il_activation, input_shape=(3,)))
 
@@ -37,13 +37,8 @@ class SLAMHyperModel(HyperModel):
         hl_num = hp.Int('num_hidden_layers', 0, 5)
         for i in range(hl_num):
             # ith hidden layer
-            hl_units = hp.Int(f'hl_{i}_units', min_value=16, max_value=256, sampling='log')
+            hl_units = hp.Int(f'hl_{i}_units', min_value=16, max_value=1024, sampling='log')
             hl_activation = hp.Choice(f'hl_{i}_activation', values=['relu', 'tanh'])
-            hl_is_regularizer = hp.Boolean(f'hl_{i}_is_regularizer', default=False)
-            hl_regularizer = None
-            if hl_is_regularizer:
-                hl_regularizer = hp.Choice(f'hl_{i}_regularizer', values=['l1', 'l2'])
-
             # Tune the number of nodes and activation function for each layer
             model.add(Dense(units=hl_units, activation=hl_activation))
 
