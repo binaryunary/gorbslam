@@ -26,7 +26,7 @@ class ORBSLAMProcessor:
             os.makedirs(self.processed_results_dir, exist_ok=True)
 
         self.orbslam = ORBSLAMResults(self.orbslam_results_dir)
-        self.model = SLAMModelHandler(self.processed_results_dir, '/Users/erik/projects/gorbslam/keras_logs')
+        self.model = SLAMModelHandler(self.processed_results_dir, os.path.join(os.getcwd(), 'keras_logs'))
 
         self._scale_align_trajectories()
 

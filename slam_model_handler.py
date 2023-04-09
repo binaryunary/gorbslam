@@ -27,7 +27,7 @@ class SLAMModelHandler:
         self.callbacks = [
             EarlyStopping(monitor='val_loss', patience=10, verbose=1),
             ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, verbose=1, min_lr=1e-7),
-            TensorBoard(log_dir=self.keras_logs_dir),
+            TensorBoard(log_dir=path.join(self.keras_logs_dir, 'tensorboard', self.project_name)),
         ]
 
 

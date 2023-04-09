@@ -59,5 +59,6 @@ class SLAMHyperModel(HyperModel):
         return model.fit(X, y, batch_size=batch_size, **kwargs)
 
 
+# Custom loss function to measure the euclidean distance between the predicted and ground truth trajectory points.
 def euclidean_distance(y_true, y_pred):
     return tf.reduce_mean(K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1)))
