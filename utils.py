@@ -1,4 +1,5 @@
 import json
+import math
 
 import numpy as np
 import pyproj
@@ -23,10 +24,26 @@ def reshape_input(points: np.ndarray, n_inputs: int) -> np.ndarray:
     return np.array(points).reshape(-1, n_inputs)
 
 
-def downsample(data: np.ndarray, n: int) -> np.ndarray:
-    downsampled_indices = np.linspace(0, data.shape[0] - 1, n, dtype=int)
+def downsample(data: np.ndarray, n: int, start=0) -> np.ndarray:
+    downsampled_indices = np.linspace(start, data.shape[0] - 1, n, dtype=int)
     downsampled_data = data[downsampled_indices]
     return downsampled_data
+
+
+def create_training_splits(training_data: tuple[np.ndarray, np.ndarray], extra_data: tuple[np.ndarray, np.ndarray], validation_split: float):
+    n_training = training_data[0].shape[0]
+    n_total = math.floor(n_training / (1 - validation_split))
+    n_not_training = n_total - n_training
+    n_validation = math.floor(n_not_training / 2)
+    n_test = n_not_training- n_validation
+
+    val_slam = downsample(extra_data[0], n_validation, 0)
+    val_true = downsample(extra_data[1], n_validation, 0)
+
+    test_slam = downsample(extra_data[0], n_test, 1)
+    test_true = downsample(extra_data[1], n_test, 1)
+
+    return training_data, (val_slam, val_true), (test_slam, test_true)
 
 
 def utm2wgs(trajectory_utm: np.ndarray) -> np.ndarray:

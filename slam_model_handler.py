@@ -10,7 +10,7 @@ from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau, Model
 from keras_tuner import RandomSearch, BayesianOptimization, Hyperband
 from keras_tuner import Objective
 
-from utils import NumpyEncoder, downsample
+from utils import NumpyEncoder, create_training_splits, downsample
 
 
 class SLAMModelHandler:
@@ -73,23 +73,40 @@ class SLAMModelHandler:
 
         # Downsample data to speed up hp search
         n_data  = math.ceil(source_trajectory.shape[0] * 0.6)
-        slam = self.source_normalizer(downsample(source_trajectory, n_data))
-        gt = self.target_normalizer(downsample(target_trajectory, n_data))
-        val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
-        val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
+        train_slam = downsample(source_trajectory, n_data)
+        train_gt = downsample(target_trajectory, n_data)
+
+        training, validation, testing = create_training_splits((train_slam, train_gt), (val_source_trajectory, val_target_trajectory), 0.2)
+
+        # slam = self.source_normalizer(downsample(source_trajectory, n_data))
+        # gt = self.target_normalizer(downsample(target_trajectory, n_data))
+        # val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
+        # val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
+
+        slam = self.source_normalizer(training[0])
+        gt = self.target_normalizer(training[1])
+        val_slam = self.source_normalizer(validation[0])
+        val_gt = self.target_normalizer(validation[1])
 
         tuner.search(slam, gt, validation_data=(val_slam, val_gt), epochs=100, callbacks=self.callbacks)
         self.best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
         self.model = hypermodel.build(self.best_hps)
 
     def _train_model(self, source_trajectory, target_trajectory, val_source_trajectory, val_target_trajectory):
-        slam = self.source_normalizer(source_trajectory)
-        gt = self.target_normalizer(target_trajectory)
 
-        n_data = source_trajectory.shape[0]
+        training, validation, testing = create_training_splits((source_trajectory, target_trajectory),
+                                                               (val_source_trajectory, val_target_trajectory), 0.2)
 
-        val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
-        val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
+        slam = self.source_normalizer(training[0])
+        gt = self.target_normalizer(training[1])
+        val_slam = self.source_normalizer(validation[0])
+        val_gt = self.target_normalizer(validation[1])
+
+        # n_data = source_trajectory.shape[0]
+        # slam = self.source_normalizer(source_trajectory)
+        # gt = self.target_normalizer(target_trajectory)
+        # val_slam = self.source_normalizer(downsample(val_source_trajectory, n_data))
+        # val_gt = self.target_normalizer(downsample(val_target_trajectory, n_data))
 
 
         # best_epochs = self.best_hps.get('epochs')
