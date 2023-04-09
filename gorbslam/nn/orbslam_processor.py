@@ -4,9 +4,9 @@ import numpy as np
 import shutil
 from gorbslam.common.linear_transforms import linear_transform, umeyama_alignment
 from gorbslam.common.plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
-from gorbslam.nn.slam_model_handler import SLAMModelHandler
+from gorbslam.nn.keras_model_wrapper import KerasModelWrapper
 
-from gorbslam.nn.slam_trajectory import read_localization_data, read_mapping_data
+from gorbslam.common.slam_trajectory import read_localization_data, read_mapping_data
 
 
 
@@ -26,7 +26,7 @@ class ORBSLAMProcessor:
             os.makedirs(self.processed_results_dir, exist_ok=True)
 
         self.orbslam = ORBSLAMResults(self.orbslam_results_dir)
-        self.model = SLAMModelHandler(self.processed_results_dir, os.path.join(os.getcwd(), 'keras_logs'))
+        self.model = KerasModelWrapper(self.processed_results_dir, os.path.join(os.getcwd(), 'keras_logs'))
 
         self._scale_align_trajectories()
 
