@@ -1,27 +1,36 @@
 import os
 
 import numpy as np
-import shutil
 from gorbslam.common.linear_transforms import linear_transform, umeyama_alignment
 from gorbslam.common.orbslam_results import ORBSLAMResults
 from gorbslam.common.plotting_utils import TraceColors, create_2d_fig, create_map_fig, create_scatter, create_scattermapbox, create_slam_scatter
-from gorbslam.common.utils import ensure_dir
-from gorbslam.nn.keras_model_wrapper import KerasModelWrapper
 
 from gorbslam.common.slam_trajectory import read_localization_data, read_mapping_data
-
+from gorbslam.common.utils import ensure_dir
+from gorbslam.gbr.gbr_model_wrapper import GBRModelWrapper
+from gorbslam.gbr.rfr_model_wrapper import RFRModelWrapper
+from gorbslam.gbr.svr_model_wrapper import SVRModelWrapper
 
 
 class ORBSLAMProcessor:
-    def __init__(self, orbslam_results_dir):
+    def __init__(self, orbslam_results_dir, model_type='gbr'):
         self.orbslam_results_dir = os.path.expanduser(orbslam_results_dir)
-        self.processed_results_dir = os.path.join(self.orbslam_results_dir, 'processed')
+        self.processed_results_dir = os.path.join(self.orbslam_results_dir, f'processed_{model_type}')
         self.trajectory_name = os.path.basename(self.orbslam_results_dir)
 
         ensure_dir(self.processed_results_dir)
 
         self.orbslam = ORBSLAMResults(self.orbslam_results_dir)
-        self.model = KerasModelWrapper(self.processed_results_dir, os.path.join(os.getcwd(), 'keras_logs'))
+
+        if model_type == 'gbr':
+            self.model = GBRModelWrapper(self.processed_results_dir)
+        elif model_type == 'rfr':
+            self.model = RFRModelWrapper(self.processed_results_dir)
+        elif model_type == 'svr':
+            self.model = SVRModelWrapper(self.processed_results_dir)
+        else:
+            raise ValueError(f'Invalid model type: {model_type}')
+
 
         self._scale_align_trajectories()
 

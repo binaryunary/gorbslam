@@ -15,6 +15,7 @@ from plotly.subplots import make_subplots
 from pykalman import KalmanFilter
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
+from evo.core.metrics import StatisticsType
 
 from gorbslam.common.utils import calculate_ape, create_trajectory_from_array, to_tum
 
@@ -158,7 +159,15 @@ def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
         )
     )
 
+    stats_title = '<br>'.join([
+        f'Mean APE: {ape_metric.get_statistic(StatisticsType.mean)}',
+        f'Median APE: {ape_metric.get_statistic(StatisticsType.median)}',
+        f'RMS APE: {ape_metric.get_statistic(StatisticsType.rmse)}',
+    ])
+
     fig.update_layout(
+        # title = f'{ape_metric.get_statistic().}<br>b<br>c',
+        title = stats_title,
         xaxis_title='x (m)',
         yaxis_title='y (m)',
         legend_orientation="h",

@@ -1,5 +1,6 @@
 import json
 import math
+import os
 
 import numpy as np
 import pyproj
@@ -88,11 +89,17 @@ def read_map_points(filename: str) -> np.ndarray:
         return np.array([tuple(map(float, line.split())) for line in file])
 
 
+def ensure_dir(dirpath: str):
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath, exist_ok=True)
+
+
 def to_tum(tum_data: np.ndarray, updated_xyz: np.ndarray) -> trajectory.PoseTrajectory3D:
     data_copy = tum_data.copy()
     data_copy[:, 1:4] = updated_xyz
 
     return data_copy
+
 
 # Convert the data to PoseTrajectory3D objects
 def create_trajectory_from_array(data: np.ndarray) -> trajectory.PoseTrajectory3D:
