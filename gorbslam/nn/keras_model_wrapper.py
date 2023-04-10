@@ -24,7 +24,7 @@ class KerasModelWrapper(ModelWrapper):
         self.model_path = path.join(self.model_dir, 'model.keras')
         self.normalizers_path = path.join(self.model_dir, 'normalizers.json')
         self.source_normalizer = None
-        self.source_normalizer = None
+        self.target_normalizer = None
         self.best_hps = None
         self._model = None
         self.callbacks = [
