@@ -88,6 +88,12 @@ def read_map_points(filename: str) -> np.ndarray:
         return np.array([tuple(map(float, line.split())) for line in file])
 
 
+def to_tum(tum_data: np.ndarray, updated_xyz: np.ndarray) -> trajectory.PoseTrajectory3D:
+    data_copy = tum_data.copy()
+    data_copy[:, 1:4] = updated_xyz
+
+    return data_copy
+
 # Convert the data to PoseTrajectory3D objects
 def create_trajectory_from_array(data: np.ndarray) -> trajectory.PoseTrajectory3D:
     stamps = data[:, 0]  # n x 1
@@ -107,10 +113,10 @@ def calculate_ape(trajectory: trajectory.PoseTrajectory3D, trajectory_gt: trajec
     # aligned_estimated_traj = trajectory.align(synced_estimated_traj, synced_ground_truth_traj, correct_scale=False, correct_only_scale=False)
 
     # Calculate Absolute Trajectory Error (ATE)
-    ate_metric = metrics.APE(metrics.PoseRelation.translation_part)
-    ate_metric.process_data((synced_ground_truth_traj, synced_estimated_traj))
+    ape_metric = metrics.APE(metrics.PoseRelation.translation_part)
+    ape_metric.process_data((synced_ground_truth_traj, synced_estimated_traj))
 
     # You can also use other statistics types (mean, median, etc.)
-    ate_stats = ate_metric.get_statistic(metrics.StatisticsType.rmse)
+    ate_stats = ape_metric.get_statistic(metrics.StatisticsType.rmse)
 
-    return ate_metric
+    return ape_metric
