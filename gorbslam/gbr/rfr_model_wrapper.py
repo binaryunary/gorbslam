@@ -32,7 +32,7 @@ class RFRModelWrapper(ModelWrapper):
         # Define the hyperparameters grid for GradientBoostingRegressor
         param_grid = {
             "estimator__n_estimators": [10, 50, 100],
-            "estimator__max_depth": [None, 10, 20],
+            "estimator__max_depth": [20, 30, 40],
             "estimator__min_samples_split": [2, 5, 10],
             "estimator__min_samples_leaf": [1, 2, 4],
         }

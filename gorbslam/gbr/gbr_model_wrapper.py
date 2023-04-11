@@ -32,8 +32,8 @@ class GBRModelWrapper(ModelWrapper):
 
         # Define the hyperparameters grid for GradientBoostingRegressor
         param_grid = {
-            "estimator__n_estimators": [100, 200, 300],
-            "estimator__learning_rate": [0.01, 0.1, 0.2],
+            "estimator__n_estimators": [100, 500, 1000],
+            "estimator__learning_rate": [0.001, 0.005, 0.01],
             "estimator__max_depth": [3, 4, 5],
             "estimator__min_samples_split": [2, 3, 4],
             "estimator__min_samples_leaf": [1, 2, 3],
