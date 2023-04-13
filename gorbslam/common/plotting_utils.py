@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from evo.tools.plot import plot_mode_to_idx, PlotMode
 from evo.core.metrics import StatisticsType
@@ -20,10 +21,12 @@ class TraceColors:
     loc = ["#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"]
 
 
-def create_scattermapbox(arr, name, color=None, bold=False, mode="markers"):
+def create_scattermapbox(
+    df: pd.DataFrame, name: str, color: str = None, bold=False, mode="markers"
+):
     return go.Scattermapbox(
-        lat=arr[:, 0],
-        lon=arr[:, 1],
+        lat=df.lat,
+        lon=df.lon,
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color) if color else None,
@@ -31,7 +34,9 @@ def create_scattermapbox(arr, name, color=None, bold=False, mode="markers"):
     )
 
 
-def create_map_fig(traces: List[go.Scattermapbox], center, title=None) -> go.Figure:
+def create_map_fig(
+    traces: List[go.Scattermapbox], center: tuple[float, float], title=None
+) -> go.Figure:
     fig = go.Figure()
     for trace in traces:
         fig.add_trace(trace)
@@ -47,10 +52,10 @@ def create_map_fig(traces: List[go.Scattermapbox], center, title=None) -> go.Fig
     return fig
 
 
-def create_scatter(arr, name, color=None, bold=False, mode="markers"):
+def create_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
     return go.Scatter(
-        x=arr[:, 0],
-        y=arr[:, 1],
+        x=df.x,
+        y=df.y,
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
@@ -58,10 +63,10 @@ def create_scatter(arr, name, color=None, bold=False, mode="markers"):
     )
 
 
-def create_slam_scatter(arr, name, color=None, bold=False, mode="markers"):
+def create_slam_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
     return go.Scatter(
-        x=arr[:, 0],
-        y=arr[:, 2],
+        x=df.x,
+        y=df.z,  # y and z are swapped in case of monocular SLAM
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
@@ -80,9 +85,9 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
     return fig
 
 
-def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
-    trajectory = create_trajectory_from_array(trajectory_tum_utm)
-    trajectory_gt = create_trajectory_from_array(trajectory_gt_tum_utm)
+def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
+    trajectory = create_trajectory_from_array(predicted.to_numpy())
+    trajectory_gt = create_trajectory_from_array(reference_gt.to_numpy())
 
     ape_metric = calculate_ape(trajectory, trajectory_gt)
 

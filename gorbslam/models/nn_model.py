@@ -4,9 +4,15 @@ from os import path
 import os
 
 import numpy as np
+from gorbslam.common.slam_trajectory import SLAMTrajectory
 from gorbslam.models.orbslam_corrector_model import ORBSLAMCorrectorModel
 
-from gorbslam.common.utils import NumpyEncoder, create_training_splits, downsample
+from gorbslam.common.utils import (
+    CustomJSONEncoder,
+    create_training_splits,
+    downsample,
+    to_xyz,
+)
 from keras.models import load_model
 from keras.layers import Normalization
 from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau
@@ -52,20 +58,16 @@ class NNModel(ORBSLAMCorrectorModel):
     def is_loaded(self):
         return self._is_loaded
 
-    @property
-    def model(self):
-        return self._model
-
     def save_model(self):
         self._model.save(self._model_path, save_format="keras")
 
         # Save normalizers' configurations
         normalizers_config = {
             "source_normalizer": json.dumps(
-                serialize_normalizer(self._source_normalizer), cls=NumpyEncoder
+                serialize_normalizer(self._source_normalizer), cls=CustomJSONEncoder
             ),
             "target_normalizer": json.dumps(
-                serialize_normalizer(self._target_normalizer), cls=NumpyEncoder
+                serialize_normalizer(self._target_normalizer), cls=CustomJSONEncoder
             ),
         }
 
@@ -91,11 +93,17 @@ class NNModel(ORBSLAMCorrectorModel):
 
     def create_model(
         self,
-        source_trajectory,
-        target_trajectory,
-        val_source_trajectory,
-        val_target_trajectory,
+        training_data: SLAMTrajectory,
+        validation_data: SLAMTrajectory = None,
     ):
+        source_trajectory = to_xyz(training_data.slam.slam)
+        target_trajectory = to_xyz(training_data.gt.utm)
+        val_source_trajectory = None
+        val_target_trajectory = None
+        if validation_data is not None:
+            val_source_trajectory = to_xyz(validation_data.slam.slam)
+            val_target_trajectory = to_xyz(validation_data.gt.utm)
+
         self._search_model(
             source_trajectory,
             target_trajectory,
@@ -118,13 +126,9 @@ class NNModel(ORBSLAMCorrectorModel):
         # Denormalize the predictions
         return self._denormalize(predicted_trajectory_norm)
 
-    def _search_model(
-        self,
-        source_trajectory,
-        target_trajectory,
-        val_source_trajectory,
-        val_target_trajectory,
-    ):
+    def _search_model(self, training_data, validation_data=None):
+        source_trajectory, target_trajectory = training_data
+
         # Create and configure normalizers
         self._source_normalizer = Normalization(input_shape=(3,))
         self._source_normalizer.adapt(source_trajectory)
@@ -148,22 +152,36 @@ class NNModel(ORBSLAMCorrectorModel):
         n_data = math.ceil(source_trajectory.shape[0] * 0.6)
         train_slam = downsample(source_trajectory, n_data)
         train_gt = downsample(target_trajectory, n_data)
-        training, validation, testing = create_training_splits(
-            (train_slam, train_gt), (val_source_trajectory, val_target_trajectory), 0.2
-        )
 
-        slam = self._source_normalizer(training[0])
-        gt = self._target_normalizer(training[1])
-        val_slam = self._source_normalizer(validation[0])
-        val_gt = self._target_normalizer(validation[1])
+        # If validation data is provided, split the training data into training and validation
+        if validation_data is not None:
+            val_source_trajectory, val_target_trajectory = validation_data
+            training, validation, testing = create_training_splits(
+                (train_slam, train_gt),
+                (val_source_trajectory, val_target_trajectory),
+                0.2,
+            )
 
-        tuner.search(
-            slam,
-            gt,
-            validation_data=(val_slam, val_gt),
-            epochs=100,
-            callbacks=self._callbacks,
-        )
+            slam = self._source_normalizer(training[0])
+            gt = self._target_normalizer(training[1])
+            val_slam = self._source_normalizer(validation[0])
+            val_gt = self._target_normalizer(validation[1])
+
+            tuner.search(
+                slam,
+                gt,
+                validation_data=(val_slam, val_gt),
+                epochs=100,
+                callbacks=self._callbacks,
+            )
+        # If no validation data is provided, use take validation_split samples from the training data
+        else:
+            slam = self._source_normalizer(source_trajectory)
+            gt = self._target_normalizer(target_trajectory)
+            tuner.search(
+                slam, gt, validation_split=0.2, epochs=100, callbacks=self._callbacks
+            )
+
         self._model_params = tuner.get_best_hyperparameters(num_trials=1)[0]
         self._model = hypermodel.build(self._model_params)
 

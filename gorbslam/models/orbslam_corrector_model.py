@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
+
+from gorbslam.common.slam_trajectory import SLAMTrajectory
+
 
 class ORBSLAMCorrectorModel(ABC):
     @property
@@ -20,10 +24,8 @@ class ORBSLAMCorrectorModel(ABC):
     @abstractmethod
     def create_model(
         self,
-        source_trajectory,
-        target_trajectory,
-        val_source_trajectory,
-        val_target_trajectory,
+        training_data: SLAMTrajectory,
+        validation_data: SLAMTrajectory = None,
     ):
         pass
 
@@ -36,5 +38,5 @@ class ORBSLAMCorrectorModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self, slam_trajectory):
+    def predict(self, slam_trajectory: np.ndarray) -> np.ndarray:
         pass

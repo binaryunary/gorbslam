@@ -2,7 +2,10 @@ from dataclasses import dataclass
 import json
 from os import path
 import numpy as np
+import pandas as pd
 from gorbslam.common.linear_transforms import umeyama_alignment
+from gorbslam.common.slam_trajectory import SLAMTrajectory
+from gorbslam.common.utils import CustomJSONEncoder, to_xyz
 from gorbslam.models.orbslam_corrector_model import ORBSLAMCorrectorModel
 
 
@@ -33,29 +36,29 @@ class UmeyamaModel(ORBSLAMCorrectorModel):
         return self._is_loaded
 
     def create_model(
-        self,
-        source_trajectory,
-        target_trajectory,
-        val_source_trajectory,
-        val_target_trajectory,
+        self, training_data: SLAMTrajectory, validation_data: SLAMTrajectory = None
     ):
+        source_trajectory = to_xyz(training_data.slam.slam)
+        target_trajectory = to_xyz(training_data.gt.utm)
+
         R, t, c = umeyama_alignment(
             source_trajectory.T,
             target_trajectory.T,
             True,
         )
         self._model_params = UmeyamaParams(R, t, c)
+        self.save_model()
 
     def save_model(self):
         with open(self._model_params_path, "w") as f:
-            json.dump(self._model_params, f)
+            json.dump(self._model_params, f, cls=CustomJSONEncoder)
 
     def load_model(self):
         if not path.exists(self._model_params_path):
             self._is_loaded = False
         else:
             with open(self._model_params_path, "r") as f:
-                self._model_params: UmeyamaParams = json.loads(
+                self._model_params = json.loads(
                     f.read(), object_hook=lambda d: UmeyamaParams(**d)
                 )
                 self._is_loaded = True
