@@ -1,7 +1,6 @@
 from keras_tuner import HyperModel, HyperParameters
-from keras.layers import Dense, Normalization, Dropout
+from keras.layers import Dense, Normalization
 from keras.models import Sequential
-from keras.optimizers import SGD, RMSprop, Adam, Nadam, Adamax, Adagrad, Adadelta
 from keras.losses import Huber
 from keras import backend as K
 import tensorflow as tf
@@ -9,9 +8,7 @@ import tensorflow as tf
 from gorbslam.common.utils import assert_trajectory_shape
 
 
-
-
-class SLAMHyperModel(HyperModel):
+class NNHyperModel(HyperModel):
     def __init__(self):
         self.source_normalizer = None
         self.target_normalizer = None

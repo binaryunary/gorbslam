@@ -1,43 +1,33 @@
-import typing
 from dataclasses import dataclass
-from os import path
 from typing import List
 
 import numpy as np
 import plotly.graph_objects as go
-import plotly.graph_objs as go
-from evo.core.metrics import APE
-from evo.core.trajectory import PoseTrajectory3D
 from evo.tools.plot import plot_mode_to_idx, PlotMode
-from keras.layers import Dense
-from keras.models import Sequential
-from plotly.subplots import make_subplots
-from pykalman import KalmanFilter
-from scipy.optimize import least_squares
-from scipy.spatial.transform import Rotation as R
 from evo.core.metrics import StatisticsType
 
-from gorbslam.common.utils import calculate_ape, create_trajectory_from_array, to_tum
+from gorbslam.common.utils import calculate_ape, create_trajectory_from_array
 
 
 FIG_HEIGHT = 800
 
+
 @dataclass(frozen=True)
 class TraceColors:
-    gt = '#636EFA'
-    slam = '#EF553B'
-    slam_scaled = '#00CC96'
-    loc = ['#AB63FA', '#FFA15A', '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+    gt = "#636EFA"
+    slam = "#EF553B"
+    slam_scaled = "#00CC96"
+    loc = ["#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"]
 
 
-def create_scattermapbox(arr, name, color=None, bold=False, mode='markers'):
+def create_scattermapbox(arr, name, color=None, bold=False, mode="markers"):
     return go.Scattermapbox(
-        lat=arr[:,0],
-        lon=arr[:,1],
+        lat=arr[:, 0],
+        lon=arr[:, 1],
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color) if color else None,
-        name=name
+        name=name,
     )
 
 
@@ -47,32 +37,35 @@ def create_map_fig(traces: List[go.Scattermapbox], center, title=None) -> go.Fig
         fig.add_trace(trace)
 
     fig.update_geos(projection_type="transverse mercator")
-    fig.update_layout(mapbox_style="open-street-map",
-                      mapbox=dict(center=dict(lat=center[0], lon=center[1]), zoom=16),
-                      margin={"t": 20, "b": 0, "l": 0, "r": 0},
-                      height=FIG_HEIGHT,
-                      title=title)
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox=dict(center=dict(lat=center[0], lon=center[1]), zoom=16),
+        margin={"t": 20, "b": 0, "l": 0, "r": 0},
+        height=FIG_HEIGHT,
+        title=title,
+    )
     return fig
 
 
-def create_scatter(arr, name, color=None, bold=False, mode='markers'):
+def create_scatter(arr, name, color=None, bold=False, mode="markers"):
     return go.Scatter(
-        x=arr[:,0],
-        y=arr[:,1],
+        x=arr[:, 0],
+        y=arr[:, 1],
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
-        name=name
+        name=name,
     )
 
-def create_slam_scatter(arr, name, color=None, bold=False, mode='markers'):
+
+def create_slam_scatter(arr, name, color=None, bold=False, mode="markers"):
     return go.Scatter(
-        x=arr[:,0],
-        y=arr[:,2],
+        x=arr[:, 0],
+        y=arr[:, 2],
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
-        name=name
+        name=name,
     )
 
 
@@ -82,9 +75,7 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
         fig.add_trace(trace)
 
     fig.update_layout(
-        title=title,
-        yaxis=dict(scaleanchor="x", scaleratio=1),
-        height=FIG_HEIGHT
+        title=title, yaxis=dict(scaleanchor="x", scaleratio=1), height=FIG_HEIGHT
     )
     return fig
 
@@ -108,7 +99,6 @@ def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
     estimated_x = trajectory.positions_xyz[:, x_idx]
     estimated_y = trajectory.positions_xyz[:, y_idx]
 
-
     # Get APE values for color grading
     ape_values = ape_metric.error
     max_ape = np.max(ape_values)
@@ -125,8 +115,8 @@ def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
             x=ground_truth_x,
             y=ground_truth_y,
             # mode='lines+markers',
-            name='Ground Truth',
-            line=dict(color='gray', dash='dash')
+            name="Ground Truth",
+            line=dict(color="gray", dash="dash"),
         )
     )
 
@@ -139,12 +129,12 @@ def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
         go.Scatter(
             x=estimated_x,
             y=estimated_y,
-            mode='markers',
-            name='Estimated',
+            mode="markers",
+            name="Estimated",
             marker=dict(
                 # size=5,
                 color=ape_values,
-                colorscale='Turbo',
+                colorscale="Turbo",
                 showscale=True,
                 colorbar=dict(
                     title="APE (m)",
@@ -152,24 +142,26 @@ def create_ape_fig(trajectory_tum_utm: np.ndarray, trajectory_gt_tum_utm):
                     tickmode="array",
                     tickvals=[tick_min, tick_mid, tick_max],
                     # labelalias={100: "Hot", 50: "Mild", 2: "Cold"},
-                    ticks="outside"
+                    ticks="outside",
                 ),
             ),
             # line=dict(color='Viridis', width=6)
         )
     )
 
-    stats_title = '<br>'.join([
-        f'Mean APE: {ape_metric.get_statistic(StatisticsType.mean)}',
-        f'Median APE: {ape_metric.get_statistic(StatisticsType.median)}',
-        f'RMS APE: {ape_metric.get_statistic(StatisticsType.rmse)}',
-    ])
+    stats_title = "<br>".join(
+        [
+            f"Mean APE: {ape_metric.get_statistic(StatisticsType.mean)}",
+            f"Median APE: {ape_metric.get_statistic(StatisticsType.median)}",
+            f"RMS APE: {ape_metric.get_statistic(StatisticsType.rmse)}",
+        ]
+    )
 
     fig.update_layout(
         # title = f'{ape_metric.get_statistic().}<br>b<br>c',
-        title = stats_title,
-        xaxis_title='x (m)',
-        yaxis_title='y (m)',
+        title=stats_title,
+        xaxis_title="x (m)",
+        yaxis_title="y (m)",
         legend_orientation="h",
         yaxis=dict(scaleanchor="x", scaleratio=1),
         height=FIG_HEIGHT,
