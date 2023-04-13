@@ -105,16 +105,12 @@ class NNModel(ORBSLAMCorrectorModel):
             val_target_trajectory = to_xyz(validation_data.gt.utm)
 
         self._search_model(
-            source_trajectory,
-            target_trajectory,
-            val_source_trajectory,
-            val_target_trajectory,
+            (source_trajectory, target_trajectory),
+            (val_source_trajectory, val_target_trajectory),
         )
         self._train_model(
-            source_trajectory,
-            target_trajectory,
-            val_source_trajectory,
-            val_target_trajectory,
+            (source_trajectory, target_trajectory),
+            (val_source_trajectory, val_target_trajectory),
         )
         self.save_model()
 
@@ -192,34 +188,55 @@ class NNModel(ORBSLAMCorrectorModel):
 
         return data * std + mean
 
-    def _train_model(
-        self,
-        source_trajectory,
-        target_trajectory,
-        val_source_trajectory,
-        val_target_trajectory,
-    ):
-        training, validation, testing = create_training_splits(
-            (source_trajectory, target_trajectory),
-            (val_source_trajectory, val_target_trajectory),
-            0.2,
-        )
-
-        slam = self._source_normalizer(training[0])
-        gt = self._target_normalizer(training[1])
-        val_slam = self._source_normalizer(validation[0])
-        val_gt = self._target_normalizer(validation[1])
+    def _train_model(self, training_data, validation_data):
+        source_trajectory, target_trajectory = training_data
 
         best_batch_size = self._model_params.get("batch_size")
-        self._model.fit(
-            slam,
-            gt,
-            validation_data=(val_slam, val_gt),
-            callbacks=self._callbacks,
-            epochs=200,
-            batch_size=best_batch_size,
-            verbose=True,
-        )
+
+        # If validation data is provided, split the training data into training and validation
+        if validation_data is not None:
+            val_source_trajectory, val_target_trajectory = validation_data
+            training, validation, testing = create_training_splits(
+                (source_trajectory, target_trajectory),
+                (val_source_trajectory, val_target_trajectory),
+                0.2,
+            )
+            slam = self._source_normalizer(training[0])
+            gt = self._target_normalizer(training[1])
+            val_slam = self._source_normalizer(validation[0])
+            val_gt = self._target_normalizer(validation[1])
+
+            self._model.fit(
+                slam,
+                gt,
+                validation_data=(val_slam, val_gt),
+                callbacks=self._callbacks,
+                epochs=200,
+                batch_size=best_batch_size,
+                verbose=True,
+            )
+        # If no validation data is provided, use take validation_split samples from the training data
+        else:
+            slam = self._source_normalizer(source_trajectory)
+            gt = self._target_normalizer(target_trajectory)
+            self.model.fit(
+                slam, gt, validation_split=0.2, epochs=100, callbacks=self._callbacks
+            )
+
+        # slam = self._source_normalizer(training[0])
+        # gt = self._target_normalizer(training[1])
+        # val_slam = self._source_normalizer(validation[0])
+        # val_gt = self._target_normalizer(validation[1])
+
+        # self._model.fit(
+        #     slam,
+        #     gt,
+        #     validation_data=(val_slam, val_gt),
+        #     callbacks=self._callbacks,
+        #     epochs=200,
+        #     batch_size=best_batch_size,
+        #     verbose=True,
+        # )
 
 
 def serialize_normalizer(normalizer):

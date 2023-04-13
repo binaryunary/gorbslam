@@ -209,6 +209,9 @@ def read_localization_data(results_root) -> dict[int, SLAMTrajectory]:
         slam = read_tum_file_df(path.join(results_root, t))
         gt = read_tum_gt(path.join(results_root, t_gt))
         trajectory_name = path.splitext(t)[0]  # name of the trajectory file
+        # Do not load trajectories with less than points
+        if (slam.shape[0] < 5) or (gt.shape[0] < 5):
+            continue
         localization_data[idx] = SLAMTrajectory(slam, gt, trajectory_name)
 
     return localization_data

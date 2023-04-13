@@ -1,6 +1,7 @@
 from ctypes import ArgumentError
 from enum import Enum
 import os
+from turtle import title
 
 import numpy as np
 
@@ -8,12 +9,20 @@ from gorbslam.common.orbslam_results import ORBSLAMResults
 from gorbslam.common.plotting_utils import (
     TraceColors,
     create_2d_fig,
+    create_ape_fig_batch,
+    create_ape_trace,
     create_map_fig,
     create_scatter,
     create_scattermapbox,
     create_slam_scatter,
 )
-from gorbslam.common.utils import ensure_dir
+from gorbslam.common.utils import (
+    calculate_ape,
+    create_trajectory_from_array,
+    ensure_dir,
+)
+
+import plotly.express as px
 
 from gorbslam.models import NNModel, GBRModel, RFRModel, SVRModel, UmeyamaModel
 
@@ -33,6 +42,7 @@ class ORBSLAMProcessor:
             self.orbslam_results_dir, f"processed_{model_type.name.lower()}"
         )
         self.trajectory_name = os.path.basename(self.orbslam_results_dir)
+        self.model_type = model_type
 
         ensure_dir(self.processed_results_dir)
 
@@ -152,30 +162,24 @@ class ORBSLAMProcessor:
 
         return create_2d_fig(traces, title="Trajectories in SLAM coordinates")
 
-    def create_ape_plot(self):
-        pass
-        # traces = [
-        #     create_scatter(
-        #         self.orbslam.mapping.trajectory_gt_utm,
-        #         "GPS (ground truth)",
-        #         color=TraceColors.gt,
-        #         mode="markers",
-        #     ),
-        #     create_scatter(
-        #         self.orbslam.mapping.trajectory_fitted_utm,
-        #         "fitted SLAM (mapping)",
-        #         color=TraceColors.slam,
-        #         mode="markers",
-        #     ),
-        # ]
+    def create_ape_plot_all(self):
+        traces = [
+            create_ape_trace(
+                self.orbslam.mapping.slam.utm, self.orbslam.mapping.gt.utm
+            ),
+        ]
 
-        # for name, localization in self.orbslam.localization.items():
-        #     traces.append(
-        #         create_scatter(
-        #             localization.trajectory_fitted_utm,
-        #             f"fitted loc_{name}",
-        #             color=TraceColors.loc[name],
-        #         )
-        #     )
+        for name, localization in self.orbslam.localization.items():
+            traces.append(create_ape_trace(localization.slam.utm, localization.gt.utm))
 
-        # return create_2d_fig(traces, title="Trajectories in UTM coordinates")
+        subplot_titles = ["SLAM (fitted)"]
+        for name, localization in self.orbslam.localization.items():
+            subplot_titles.append(f"loc_{name}")
+
+        fig = create_ape_fig_batch(
+            traces,
+            title=f"[{self.model_type.name}] Absolute Pose Error (APE)",
+            subplot_titles=subplot_titles,
+        )
+
+        return fig

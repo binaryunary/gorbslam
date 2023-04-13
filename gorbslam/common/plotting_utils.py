@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from evo.tools.plot import plot_mode_to_idx, PlotMode
 from evo.core.metrics import StatisticsType
+from plotly.subplots import make_subplots
 
 from gorbslam.common.utils import calculate_ape, create_trajectory_from_array
 
@@ -81,6 +82,106 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
 
     fig.update_layout(
         title=title, yaxis=dict(scaleanchor="x", scaleratio=1), height=FIG_HEIGHT
+    )
+    return fig
+
+
+@dataclass(frozen=True, init=True)
+class APETrace:
+    predicted: go.Scatter
+    reference_gt: go.Scatter
+    ape_values: np.ndarray
+
+
+def create_ape_trace(
+    predicted: pd.DataFrame,
+    reference_gt: pd.DataFrame,
+):
+    trajectory = create_trajectory_from_array(predicted.to_numpy())
+    trajectory_gt = create_trajectory_from_array(reference_gt.to_numpy())
+    ape_metric = calculate_ape(trajectory, trajectory_gt)
+
+    x_idx, y_idx, z_idx = plot_mode_to_idx(PlotMode.xy)
+
+    ground_truth_x = trajectory_gt.positions_xyz[:, x_idx]
+    ground_truth_y = trajectory_gt.positions_xyz[:, y_idx]
+
+    estimated_x = trajectory.positions_xyz[:, x_idx]
+    estimated_y = trajectory.positions_xyz[:, y_idx]
+
+    ape_values = ape_metric.error
+
+    return APETrace(
+        predicted=go.Scatter(
+            x=estimated_x,
+            y=estimated_y,
+            mode="markers",
+            name="Estimated",
+            text=ape_values,
+            marker=dict(
+                color=ape_values,  # Use the normalized error values
+                coloraxis="coloraxis",
+            ),
+            showlegend=False,
+        ),
+        reference_gt=go.Scatter(
+            x=ground_truth_x,
+            y=ground_truth_y,
+            # mode='lines+markers',
+            name="Ground Truth",
+            line=dict(color="gray", dash="dash"),
+            showlegend=False,
+        ),
+        ape_values=ape_values,
+    )
+
+
+def create_ape_fig_batch(
+    traces: List[APETrace], title=None, subplot_titles=None
+) -> go.Figure:
+    n_cols = 2
+    n_rows = len(traces) // n_cols + len(traces) % n_cols
+    fig = make_subplots(n_rows, n_cols, subplot_titles=subplot_titles)
+    for i, trace in enumerate(traces):
+        col = i % n_cols + 1
+        row = i // n_cols + 1
+        fig.add_trace(trace.reference_gt, row, col)
+        fig.add_trace(trace.predicted, row, col)
+
+    # Lock the scale for all subplots
+    for r in range(1, n_rows + 1):
+        for c in range(1, n_cols + 1):
+            fig.update_yaxes(scaleanchor=f"x{r}{c}", scaleratio=1, row=r, col=c)
+
+    all_ape_values = np.concatenate([trace.ape_values for trace in traces])
+    tick_min = all_ape_values.min()
+    tick_max = all_ape_values.max()
+    tick_mean = all_ape_values.mean()
+    tick_median = np.median(all_ape_values)
+
+    fig.update_layout(
+        title_text=title,
+        height=1200,
+        width=1200,
+        coloraxis=dict(
+            colorscale="Turbo",
+            colorbar=dict(
+                title="APE (m)",
+                titleside="top",
+                tickmode="array",
+                tickvals=[tick_min, tick_median, tick_mean, tick_max],
+                ticktext=[
+                    f"Min: {tick_min:.2f}",
+                    f"Median: {tick_median:.2f}",
+                    f"Mean: {tick_mean:.2f}",
+                    f"Max: {tick_max:.2f}",
+                ],
+                # ticktext=["min", "median", "mean", "max"]
+                # labelalias={100: "Hot", 50: "Mild", 2: "Cold"},
+                ticks="outside",
+                orientation="h",
+            ),
+        ),
     )
     return fig
 
