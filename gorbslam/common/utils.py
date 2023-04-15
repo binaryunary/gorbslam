@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 import pyproj
 
-from evo.core import metrics, sync, trajectory, lie_algebra
-import evo.tools.file_interface
+from evo.core import metrics, sync, trajectory
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -83,12 +82,7 @@ def replace_tum_xyz(tum_data: np.ndarray, xyz: np.ndarray) -> np.ndarray:
     return tum_data_copy
 
 
-def read_tum_file(filename: str) -> np.ndarray:
-    with open(filename, "r") as file:
-        return np.array([tuple(map(float, line.split())) for line in file])
-
-
-def read_tum_file_df(file_path: str) -> np.ndarray:
+def read_tum(file_path: str) -> np.ndarray:
     return pd.read_csv(
         file_path,
         names=["timestamp", "x", "y", "z", "qx", "qy", "qz", "qw"],
@@ -124,15 +118,6 @@ def ensure_dir(dirpath: str):
         os.makedirs(dirpath, exist_ok=True)
 
 
-def to_tum(
-    tum_data: np.ndarray, updated_xyz: np.ndarray
-) -> trajectory.PoseTrajectory3D:
-    data_copy = tum_data.copy()
-    data_copy[:, 1:4] = updated_xyz
-
-    return data_copy
-
-
 def to_xyz(tum_df: pd.DataFrame) -> np.ndarray:
     return tum_df[["x", "y", "z"]].to_numpy()
 
@@ -156,14 +141,8 @@ def calculate_ape(
         trajectory_gt, trajectory, max_diff
     )
 
-    # Align the estimated trajectory to the ground truth trajectory (only needed for ATE)
-    # aligned_estimated_traj = trajectory.align(synced_estimated_traj, synced_ground_truth_traj, correct_scale=False, correct_only_scale=False)
-
     # Calculate Absolute Trajectory Error (ATE)
     ape_metric = metrics.APE(metrics.PoseRelation.translation_part)
     ape_metric.process_data((synced_ground_truth_traj, synced_estimated_traj))
-
-    # You can also use other statistics types (mean, median, etc.)
-    ate_stats = ape_metric.get_statistic(metrics.StatisticsType.rmse)
 
     return ape_metric

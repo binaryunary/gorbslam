@@ -178,8 +178,8 @@ def create_ape_fig_batch(
         # width=1200,
         coloraxis=dict(
             colorscale="Turbo",
-            # cmin=0,
-            cmin=all_ape_values.min(),
+            cmin=0,
+            # cmin=all_ape_values.min(),
             cmax=tick_p99,
             colorbar=dict(
                 title="APE (m)",
