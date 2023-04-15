@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Tuple
+from matplotlib.colors import cnames
 
 import numpy as np
 import pandas as pd
@@ -119,6 +120,7 @@ def create_ape_trace(
             name="Estimated",
             text=ape_values,
             marker=dict(
+                size=3,
                 color=ape_values,  # Use the normalized error values
                 coloraxis="coloraxis",
             ),
@@ -141,7 +143,14 @@ def create_ape_fig_batch(
 ) -> go.Figure:
     n_cols = 2
     n_rows = len(traces) // n_cols + len(traces) % n_cols
-    fig = make_subplots(n_rows, n_cols, subplot_titles=subplot_titles)
+
+    fig = make_subplots(
+        n_rows,
+        n_cols,
+        subplot_titles=subplot_titles,
+        horizontal_spacing=0.08,
+        vertical_spacing=0.08,
+    )
     for i, trace in enumerate(traces):
         col = i % n_cols + 1
         row = i // n_cols + 1
@@ -149,35 +158,40 @@ def create_ape_fig_batch(
         fig.add_trace(trace.predicted, row, col)
 
     # Lock the scale for all subplots
+    x_c = 1
     for r in range(1, n_rows + 1):
         for c in range(1, n_cols + 1):
-            fig.update_yaxes(scaleanchor=f"x{r}{c}", scaleratio=1, row=r, col=c)
+            fig.update_yaxes(
+                scaleanchor=f"x{x_c if x_c > 1 else ''}", scaleratio=1, row=r, col=c
+            )
+            x_c += 1
 
     all_ape_values = np.concatenate([trace.ape_values for trace in traces])
     tick_min = all_ape_values.min()
-    tick_max = all_ape_values.max()
     tick_mean = all_ape_values.mean()
     tick_median = np.median(all_ape_values)
+    tick_p99 = np.percentile(all_ape_values, 99)
 
     fig.update_layout(
         title_text=title,
-        height=1200,
-        width=1200,
+        height=1400,
+        # width=1200,
         coloraxis=dict(
             colorscale="Turbo",
+            # cmin=0,
+            cmin=all_ape_values.min(),
+            cmax=tick_p99,
             colorbar=dict(
                 title="APE (m)",
                 titleside="top",
                 tickmode="array",
-                tickvals=[tick_min, tick_median, tick_mean, tick_max],
+                tickvals=[tick_min, tick_median, tick_mean, tick_p99],
                 ticktext=[
                     f"Min: {tick_min:.2f}",
                     f"Median: {tick_median:.2f}",
                     f"Mean: {tick_mean:.2f}",
-                    f"Max: {tick_max:.2f}",
+                    f"p99: {tick_p99:.2f}",
                 ],
-                # ticktext=["min", "median", "mean", "max"]
-                # labelalias={100: "Hot", 50: "Mild", 2: "Cold"},
                 ticks="outside",
                 orientation="h",
             ),
@@ -274,46 +288,3 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
     )
 
     return fig
-
-
-# Placeholder for plotting using matplotlib accoring to evo's examples at
-# https://github.com/MichaelGrupp/evo/blob/master/notebooks/metrics.py_API_Documentation.ipynb
-def evo_plot():
-    # ape_metric = calculate_ape(trajectory, trajectory_gt)
-
-    # ape_stats = ape_metric.get_all_statistics()
-    # pprint.pprint(ape_stats)
-
-    # pose_relation = metrics.PoseRelation.rotation_angle_deg
-    # delta = 1
-    # delta_unit = metrics.Unit.frames
-    # all_pairs = False  # activate
-
-    # data = (trajectory_gt, trajectory)
-
-    # rpe_metric = metrics.RPE(pose_relation=pose_relation, delta=delta, delta_unit=delta_unit, all_pairs=all_pairs)
-    # rpe_metric.process_data(data)
-    # rpe_stats = rpe_metric.get_all_statistics()
-
-    # traj_ref_plot = copy.deepcopy(trajectory_gt)
-    # traj_est_plot = copy.deepcopy(trajectory)
-    # traj_ref_plot.reduce_to_ids(rpe_metric.delta_ids)
-    # traj_est_plot.reduce_to_ids(rpe_metric.delta_ids)
-    # seconds_from_start = [t - trajectory.timestamps[0] for t in trajectory.timestamps[1:]]
-
-    # rpe_metric = metrics.RPE(pose_relation=pose_relation, delta=delta, delta_unit=delta_unit, all_pairs=all_pairs)
-    # rpe_metric.process_data(data)
-
-    # traj_by_label = {
-    #     'fitted SLAM (mapping)': trajectory,
-    #     'GPS (ground truth)': trajectory_gt
-    # }
-
-    # plot_mode = plot.PlotMode.xy
-    # fig = plt.figure()
-    # ax = plot.prepare_axis(fig, plot_mode)
-    # plot.traj(ax, plot_mode, trajectory_gt, '--', "gray", "reference")
-    # plot.traj_colormap(ax, traj_est_plot, rpe_metric.error, plot_mode, min_map=rpe_stats["min"], max_map=rpe_stats["max"])
-    # ax.legend()
-    # plt.show()
-    pass
