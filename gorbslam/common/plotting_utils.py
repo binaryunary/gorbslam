@@ -174,7 +174,7 @@ def create_ape_fig_batch(
 
     fig.update_layout(
         title_text=title,
-        height=1400,
+        height=1600,
         # width=1200,
         coloraxis=dict(
             colorscale="Turbo",
@@ -200,7 +200,7 @@ def create_ape_fig_batch(
     return fig
 
 
-def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
+def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame, title=None):
     trajectory = create_trajectory_from_array(predicted.to_numpy())
     trajectory_gt = create_trajectory_from_array(reference_gt.to_numpy())
 
@@ -219,14 +219,6 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
     estimated_x = trajectory.positions_xyz[:, x_idx]
     estimated_y = trajectory.positions_xyz[:, y_idx]
 
-    # Get APE values for color grading
-    ape_values = ape_metric.error
-    max_ape = np.max(ape_values)
-    min_ape = np.min(ape_values)
-
-    # Normalize APE values to the range [0, 1]
-    # norm_ape_values = (ape_values - min_ape) / (max_ape - min_ape)
-
     fig = go.Figure()
 
     # Ground truth trajectory
@@ -240,9 +232,14 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
         )
     )
 
-    tick_min = ape_metric.error.min()
-    tick_max = ape_metric.error.max()
-    tick_mid = (tick_min + tick_max) / 2
+    # Get APE values for color grading
+    ape_values = ape_metric.error
+
+    tick_min = ape_values.min()
+    tick_mean = ape_values.mean()
+    tick_median = np.median(ape_values)
+    tick_rmse = np.sqrt(np.mean(ape_values**2))
+    tick_p99 = np.percentile(ape_values, 99)
 
     # Estimated trajectory
     fig.add_trace(
@@ -252,20 +249,27 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
             mode="markers",
             name="Estimated",
             marker=dict(
-                # size=5,
+                size=3,
                 color=ape_values,
                 colorscale="Turbo",
                 showscale=True,
+                cmin=0,
+                cmax=tick_p99,
                 colorbar=dict(
                     title="APE (m)",
                     titleside="top",
                     tickmode="array",
-                    tickvals=[tick_min, tick_mid, tick_max],
-                    # labelalias={100: "Hot", 50: "Mild", 2: "Cold"},
+                    tickvals=[tick_min, tick_mean, tick_median, tick_rmse, tick_p99],
+                    ticktext=[
+                        f"Min: {tick_min:.2f}",
+                        f"Mean: {tick_mean:.2f}",
+                        f"Median: {tick_median:.2f}",
+                        f"RMSE: {tick_rmse:.2f}",
+                        f"p99: {tick_p99:.2f}",
+                    ],
                     ticks="outside",
                 ),
             ),
-            # line=dict(color='Viridis', width=6)
         )
     )
 
@@ -279,7 +283,7 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame):
 
     fig.update_layout(
         # title = f'{ape_metric.get_statistic().}<br>b<br>c',
-        title=stats_title,
+        title=title,
         xaxis_title="x (m)",
         yaxis_title="y (m)",
         legend_orientation="h",

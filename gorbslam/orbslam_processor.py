@@ -9,6 +9,7 @@ from gorbslam.common.orbslam_results import ORBSLAMResults
 from gorbslam.common.plotting_utils import (
     TraceColors,
     create_2d_fig,
+    create_ape_fig,
     create_ape_fig_batch,
     create_ape_trace,
     create_map_fig,
@@ -183,3 +184,19 @@ class ORBSLAMProcessor:
         )
 
         return fig
+
+    def create_ape_plot(self, loc: int = None):
+        if not loc:
+            return create_ape_fig(
+                self.orbslam.mapping.slam.utm,
+                self.orbslam.mapping.gt.utm,
+                "SLAM (fitted)",
+            )
+        else:
+            if (loc > len(self.orbslam.localization)) or (loc < 1):
+                raise ArgumentError(f"Invalid localization number: {loc}")
+            return create_ape_fig(
+                self.orbslam.localization[loc].slam.utm,
+                self.orbslam.localization[loc].gt.utm,
+                f"loc_{loc}",
+            )
