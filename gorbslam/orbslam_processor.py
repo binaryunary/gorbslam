@@ -26,14 +26,16 @@ from gorbslam.common.utils import (
 import plotly.express as px
 
 from gorbslam.models import NNModel, GBRModel, RFRModel, SVRModel, UmeyamaModel
+from gorbslam.models.nn_clr_model import NNCLRModel
 
 
 class ModelType(Enum):
     NN = 1
-    GBR = 2
-    RFR = 3
-    SVR = 4
-    UMEYAMA = 5
+    NN_CLR = 2
+    GBR = 3
+    RFR = 4
+    SVR = 5
+    UMEYAMA = 6
 
 
 class ORBSLAMProcessor:
@@ -51,6 +53,8 @@ class ORBSLAMProcessor:
 
         if model_type == ModelType.NN:
             self.model = NNModel(self.processed_results_dir)
+        if model_type == ModelType.NN_CLR:
+            self.model = NNCLRModel(self.processed_results_dir)
         elif model_type == ModelType.GBR:
             self.model = GBRModel(self.processed_results_dir)
         elif model_type == ModelType.RFR:
