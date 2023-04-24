@@ -2,7 +2,7 @@ from keras_tuner import HyperModel, HyperParameters
 from keras.layers import Dense, Normalization
 from keras.models import Sequential
 from keras.losses import Huber
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 from keras import backend as K
 import tensorflow as tf
 
@@ -51,7 +51,8 @@ class NNHyperModel(HyperModel):
         loss = Huber(delta=huber_delta)
 
         if self.clr is not None:
-            optimizer = Adam(learning_rate=self.clr)
+            # optimizer = Adam(learning_rate=self.clr)
+            optimizer = SGD(learning_rate=self.clr)
         else:
             optimizer = Adam()
 

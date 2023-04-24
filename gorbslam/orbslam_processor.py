@@ -1,7 +1,6 @@
+import os
 from ctypes import ArgumentError
 from enum import Enum
-import os
-from turtle import title
 
 import numpy as np
 
@@ -9,23 +8,18 @@ from gorbslam.common.orbslam_results import ORBSLAMResults
 from gorbslam.common.plotting_utils import (
     TraceColors,
     create_2d_fig,
+    create_3d_fig,
+    create_3d_scatter,
     create_ape_fig,
     create_ape_fig_batch,
     create_ape_trace,
     create_map_fig,
-    create_scatter,
+    create_2d_scatter,
     create_scattermapbox,
-    create_slam_scatter,
+    create_slam_2d_scatter,
 )
-from gorbslam.common.utils import (
-    calculate_ape,
-    create_trajectory_from_array,
-    ensure_dir,
-)
-
-import plotly.express as px
-
-from gorbslam.models import NNModel, GBRModel, RFRModel, SVRModel, UmeyamaModel
+from gorbslam.common.utils import ensure_dir
+from gorbslam.models import GBRModel, NNModel, RFRModel, SVRModel, UmeyamaModel
 from gorbslam.models.nn_clr_model import NNCLRModel
 
 
@@ -53,7 +47,7 @@ class ORBSLAMProcessor:
 
         if model_type == ModelType.NN:
             self.model = NNModel(self.processed_results_dir)
-        if model_type == ModelType.NN_CLR:
+        elif model_type == ModelType.NN_CLR:
             self.model = NNCLRModel(self.processed_results_dir)
         elif model_type == ModelType.GBR:
             self.model = GBRModel(self.processed_results_dir)
@@ -75,14 +69,6 @@ class ORBSLAMProcessor:
         for localization in self.orbslam.localization.values():
             localization.slam.fit(self.model.predict)
 
-        # self.orbslam.mapping.trajectory_fitted_utm = self.model.predict(
-        #     self.orbslam.mapping.trajectory
-        # )
-        # for localization in self.orbslam.localization.values():
-        #     localization.trajectory_fitted_utm = self.model.predict(
-        #         localization.trajectory
-        #     )
-
     def save_trajectories(self):
         self.orbslam.mapping.save(self.processed_results_dir)
         for localization in self.orbslam.localization.values():
@@ -95,6 +81,7 @@ class ORBSLAMProcessor:
                 "GPS (ground truth)",
                 color=TraceColors.gt,
                 mode="lines",
+                bold=True,
             ),
             create_scattermapbox(
                 self.orbslam.mapping.slam.wgs,
@@ -120,13 +107,13 @@ class ORBSLAMProcessor:
 
     def create_2d_plot_utm(self):
         traces = [
-            create_scatter(
+            create_2d_scatter(
                 self.orbslam.mapping.gt.utm,
                 "GPS (ground truth)",
                 color=TraceColors.gt,
                 mode="markers",
             ),
-            create_scatter(
+            create_2d_scatter(
                 self.orbslam.mapping.slam.utm,
                 "fitted SLAM (mapping)",
                 color=TraceColors.slam,
@@ -136,7 +123,7 @@ class ORBSLAMProcessor:
 
         for name, localization in self.orbslam.localization.items():
             traces.append(
-                create_scatter(
+                create_2d_scatter(
                     localization.slam.utm,
                     f"fitted loc_{name}",
                     color=TraceColors.loc[name],
@@ -147,7 +134,7 @@ class ORBSLAMProcessor:
 
     def create_2d_plot_slam(self):
         traces = [
-            create_slam_scatter(
+            create_slam_2d_scatter(
                 self.orbslam.mapping.slam.slam,
                 "SLAM (mapping)",
                 color=TraceColors.slam,
@@ -157,7 +144,7 @@ class ORBSLAMProcessor:
 
         for name, localization in self.orbslam.localization.items():
             traces.append(
-                create_slam_scatter(
+                create_slam_2d_scatter(
                     localization.slam.slam,
                     f"SLAM loc_{name}",
                     color=TraceColors.loc[name],
@@ -166,6 +153,36 @@ class ORBSLAMProcessor:
             )
 
         return create_2d_fig(traces, title="Trajectories in SLAM coordinates")
+
+    def create_3d_plot_slam(self):
+        traces = [
+            create_3d_scatter(
+                self.orbslam.mapping.slam.slam,
+                "SLAM (mapping)",
+                color=TraceColors.slam,
+                mode="lines",
+                bold=True,
+            ),
+            create_3d_scatter(
+                self.orbslam.map_points,
+                "Map points",
+                color="black",
+                mode="markers",
+                size=1,
+            ),
+        ]
+
+        # for name, localization in self.orbslam.localization.items():
+        #     traces.append(
+        #         create_3d_scatter(
+        #             localization.slam.slam,
+        #             f"SLAM loc_{name}",
+        #             color=TraceColors.loc[name],
+        #             mode="markers",
+        #         )
+        #     )
+
+        return create_3d_fig(traces, title="Trajectories in SLAM coordinates")
 
     def create_ape_plot_all(self):
         traces = [

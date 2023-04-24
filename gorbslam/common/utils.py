@@ -2,6 +2,7 @@ import dataclasses
 import json
 import math
 import os
+from isort import file
 
 import numpy as np
 import pandas as pd
@@ -82,7 +83,7 @@ def replace_tum_xyz(tum_data: np.ndarray, xyz: np.ndarray) -> np.ndarray:
     return tum_data_copy
 
 
-def read_tum(file_path: str) -> np.ndarray:
+def read_tum(file_path: str) -> pd.DataFrame:
     return pd.read_csv(
         file_path,
         names=["timestamp", "x", "y", "z", "qx", "qy", "qz", "qw"],
@@ -90,7 +91,7 @@ def read_tum(file_path: str) -> np.ndarray:
     )
 
 
-def read_tum_gt(file_path: str) -> np.ndarray:
+def read_tum_gt(file_path: str) -> pd.DataFrame:
     return pd.read_csv(
         file_path,
         names=["timestamp", "lat", "lon", "alt", "qx", "qy", "qz", "qw"],
@@ -108,9 +109,8 @@ def write_tum_file_df(file_path: str, df: pd.DataFrame):
     df.to_csv(file_path, sep=" ", header=False, index=False)
 
 
-def read_map_points(filename: str) -> np.ndarray:
-    with open(filename, "r") as file:
-        return np.array([tuple(map(float, line.split())) for line in file])
+def read_map_points(file_path: str) -> pd.DataFrame:
+    return pd.read_csv(file_path, names=["x", "y", "z"], delim_whitespace=True)
 
 
 def ensure_dir(dirpath: str):

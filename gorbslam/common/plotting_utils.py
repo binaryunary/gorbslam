@@ -54,7 +54,7 @@ def create_map_fig(
     return fig
 
 
-def create_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
+def create_2d_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
     return go.Scatter(
         x=df.x,
         y=df.y,
@@ -65,13 +65,30 @@ def create_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers
     )
 
 
-def create_slam_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
+# Switches y and z.
+def create_slam_2d_scatter(
+    df: pd.DataFrame, name, color=None, bold=False, mode="markers"
+):
     return go.Scatter(
         x=df.x,
         y=df.z,  # y and z are swapped in case of monocular SLAM
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
+        name=name,
+    )
+
+
+def create_3d_scatter(
+    df: pd.DataFrame, name, color=None, bold=False, mode="markers", size=3
+):
+    return go.Scatter3d(
+        x=df.x,
+        y=df.y,
+        z=df.z,
+        mode=mode,
+        line=dict(width=5) if bold else None,
+        marker=dict(color=color, size=size) if color else None,
         name=name,
     )
 
@@ -83,6 +100,22 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
 
     fig.update_layout(
         title=title, yaxis=dict(scaleanchor="x", scaleratio=1), height=FIG_HEIGHT
+    )
+    return fig
+
+
+def create_3d_fig(traces: List[go.Scatter3d], title=None) -> go.Figure:
+    fig = go.Figure()
+    for trace in traces:
+        fig.add_trace(trace)
+
+    fig.update_layout(
+        title=title,
+        scene=dict(
+            xaxis_title="X", yaxis_title="Y", zaxis_title="Z", aspectmode="data"
+        ),
+        height=FIG_HEIGHT,
+        margin={"t": 50, "b": 0, "l": 0, "r": 0},
     )
     return fig
 
@@ -158,13 +191,13 @@ def create_ape_fig_batch(
         fig.add_trace(trace.predicted, row, col)
 
     # Lock the scale for all subplots
-    x_c = 1
+    xaxis = 1
     for r in range(1, n_rows + 1):
         for c in range(1, n_cols + 1):
             fig.update_yaxes(
-                scaleanchor=f"x{x_c if x_c > 1 else ''}", scaleratio=1, row=r, col=c
+                scaleanchor=f"x{xaxis if xaxis > 1 else ''}", scaleratio=1, row=r, col=c
             )
-            x_c += 1
+            xaxis += 1
 
     all_ape_values = np.concatenate([trace.ape_values for trace in traces])
     tick_min = all_ape_values.min()
