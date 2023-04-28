@@ -112,9 +112,15 @@ def create_3d_fig(traces: List[go.Scatter3d], title=None) -> go.Figure:
     fig.update_layout(
         title=title,
         scene=dict(
-            xaxis_title="X", yaxis_title="Y", zaxis_title="Z", aspectmode="data"
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            xaxis_title="X",
+            yaxis_title="Y",
+            zaxis_title="Z",
+            aspectmode="data",
         ),
-        height=FIG_HEIGHT,
+        height=1200,
         margin={"t": 50, "b": 0, "l": 0, "r": 0},
     )
     return fig

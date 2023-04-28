@@ -28,6 +28,7 @@ class NNModel(ORBSLAMCorrectorModel):
         )  # TODO: Find a cleaner way to do this
         self._keras_logs_dir = path.join(os.getcwd(), "keras_logs")
         self._model_path = path.join(self._model_dir, "model.keras")
+        self._model_params_path = path.join(self._model_dir, "model_params.json")
         self._normalizers_path = path.join(self._model_dir, "normalizers.json")
         self._source_normalizer = None
         self._target_normalizer = None
@@ -73,6 +74,9 @@ class NNModel(ORBSLAMCorrectorModel):
 
         with open(self._normalizers_path, "w") as f:
             json.dump(normalizers_config, f)
+
+        with open(self._model_params_path, "w") as f:
+            json.dump(self._model_params.get_config(), f)
 
     def load_model(self):
         if not path.exists(self._model_path) or not path.exists(self._normalizers_path):
@@ -137,7 +141,7 @@ class NNModel(ORBSLAMCorrectorModel):
             overwrite=True,
             objective="val_loss",
             # objective=Objective('val_euclidean_distance', direction='min'),
-            max_epochs=210,
+            max_epochs=300,
             factor=3,
             seed=42,
             directory=self._keras_logs_dir,
@@ -174,9 +178,7 @@ class NNModel(ORBSLAMCorrectorModel):
         else:
             slam = self._source_normalizer(source_trajectory)
             gt = self._target_normalizer(target_trajectory)
-            tuner.search(
-                slam, gt, validation_split=0.2, epochs=100, callbacks=self._callbacks
-            )
+            tuner.search(slam, gt, validation_split=0.2, callbacks=self._callbacks)
 
         self._model_params = tuner.get_best_hyperparameters(num_trials=1)[0]
         self._model = hypermodel.build(self._model_params)
@@ -211,7 +213,7 @@ class NNModel(ORBSLAMCorrectorModel):
                 gt,
                 validation_data=(val_slam, val_gt),
                 callbacks=self._callbacks,
-                epochs=200,
+                epochs=280,
                 batch_size=best_batch_size,
                 verbose=True,
             )
@@ -220,7 +222,7 @@ class NNModel(ORBSLAMCorrectorModel):
             slam = self._source_normalizer(source_trajectory)
             gt = self._target_normalizer(target_trajectory)
             self.model.fit(
-                slam, gt, validation_split=0.2, epochs=100, callbacks=self._callbacks
+                slam, gt, validation_split=0.2, epochs=280, callbacks=self._callbacks
             )
 
         # slam = self._source_normalizer(training[0])

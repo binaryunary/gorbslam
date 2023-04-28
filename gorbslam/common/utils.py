@@ -122,7 +122,7 @@ def to_xyz(tum_df: pd.DataFrame) -> np.ndarray:
     return tum_df[["x", "y", "z"]].to_numpy()
 
 
-# Convert the data to PoseTrajectory3D objects
+# Converts TUM data to PoseTrajectory3D
 def create_trajectory_from_array(data: np.ndarray) -> trajectory.PoseTrajectory3D:
     stamps = data[:, 0]  # n x 1
     xyz = data[:, 1:4]  # n x 3
