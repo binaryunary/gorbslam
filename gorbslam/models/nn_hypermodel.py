@@ -31,10 +31,16 @@ class NNHyperModel(HyperModel):
         # Input layer
         il_units = hp.Int("il_units", min_value=16, max_value=1024, sampling="log")
         il_activation = hp.Choice("il_activation", values=["relu", "tanh"])
-        model.add(Dense(units=il_units, activation=il_activation, input_shape=(3,)))
+        model.add(
+            Dense(
+                units=il_units,
+                activation=il_activation,
+                input_shape=(3,),
+            )
+        )
 
         # Choose the number of hidden layers
-        hl_num = hp.Int("num_hidden_layers", 0, 5)
+        hl_num = hp.Int("num_hidden_layers", 0, 10)
         for i in range(hl_num):
             # ith hidden layer
             hl_units = hp.Int(
@@ -42,7 +48,12 @@ class NNHyperModel(HyperModel):
             )
             hl_activation = hp.Choice(f"hl_{i}_activation", values=["relu", "tanh"])
             # Tune the number of nodes and activation function for each layer
-            model.add(Dense(units=hl_units, activation=hl_activation))
+            model.add(
+                Dense(
+                    units=hl_units,
+                    activation=hl_activation,
+                )
+            )
 
         # Output layer
         model.add(Dense(3))
@@ -50,11 +61,15 @@ class NNHyperModel(HyperModel):
         huber_delta = hp.Float("huber_delta", min_value=0.1, max_value=1.0, step=0.1)
         loss = Huber(delta=huber_delta)
 
+        learning_rate = hp.Float(
+            "learning_rate", min_value=1e-5, max_value=1e-2, sampling="log"
+        )
+
         if self.clr is not None:
             # optimizer = Adam(learning_rate=self.clr)
             optimizer = SGD(learning_rate=self.clr)
         else:
-            optimizer = Adam()
+            optimizer = Adam(learning_rate=learning_rate)
 
         # Compile the model
         model.compile(optimizer=optimizer, loss=loss)

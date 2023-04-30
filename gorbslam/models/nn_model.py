@@ -1,3 +1,4 @@
+import datetime
 import json
 import math
 from os import path
@@ -19,6 +20,8 @@ from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau
 from keras_tuner import Hyperband
 from gorbslam.models.nn_hypermodel import NNHyperModel
 
+TRAINING_EPOCHS = 200
+
 
 class NNModel(ORBSLAMCorrectorModel):
     def __init__(self, model_dir):
@@ -35,15 +38,15 @@ class NNModel(ORBSLAMCorrectorModel):
         self._model_params = None
         self._model = None
         self._is_loaded = False
+        now = datetime.datetime.now()
+        tb_out_dirname = f"{self._project_name}_{now.strftime('%Y%m%d_%H%M%S')}"
         self._callbacks = [
             EarlyStopping(monitor="val_loss", patience=10, verbose=1),
             ReduceLROnPlateau(
                 monitor="val_loss", factor=0.2, patience=5, verbose=1, min_lr=1e-7
             ),
             TensorBoard(
-                log_dir=path.join(
-                    self._keras_logs_dir, "tensorboard", self._project_name
-                )
+                log_dir=path.join(self._keras_logs_dir, "tensorboard", tb_out_dirname)
             ),
         ]
 
@@ -141,7 +144,7 @@ class NNModel(ORBSLAMCorrectorModel):
             overwrite=True,
             objective="val_loss",
             # objective=Objective('val_euclidean_distance', direction='min'),
-            max_epochs=300,
+            max_epochs=TRAINING_EPOCHS * 1.1,
             factor=3,
             seed=42,
             directory=self._keras_logs_dir,
@@ -149,7 +152,7 @@ class NNModel(ORBSLAMCorrectorModel):
         )
 
         # Downsample data to speed up hp search
-        n_data = math.ceil(source_trajectory.shape[0] * 0.6)
+        n_data = math.ceil(source_trajectory.shape[0] * 0.3)
         train_slam = downsample(source_trajectory, n_data)
         train_gt = downsample(target_trajectory, n_data)
 
@@ -171,7 +174,6 @@ class NNModel(ORBSLAMCorrectorModel):
                 slam,
                 gt,
                 validation_data=(val_slam, val_gt),
-                epochs=100,
                 callbacks=self._callbacks,
             )
         # If no validation data is provided, use take validation_split samples from the training data
@@ -213,7 +215,7 @@ class NNModel(ORBSLAMCorrectorModel):
                 gt,
                 validation_data=(val_slam, val_gt),
                 callbacks=self._callbacks,
-                epochs=280,
+                epochs=TRAINING_EPOCHS,
                 batch_size=best_batch_size,
                 verbose=True,
             )
@@ -222,23 +224,12 @@ class NNModel(ORBSLAMCorrectorModel):
             slam = self._source_normalizer(source_trajectory)
             gt = self._target_normalizer(target_trajectory)
             self.model.fit(
-                slam, gt, validation_split=0.2, epochs=280, callbacks=self._callbacks
+                slam,
+                gt,
+                validation_split=0.2,
+                epochs=TRAINING_EPOCHS,
+                callbacks=self._callbacks,
             )
-
-        # slam = self._source_normalizer(training[0])
-        # gt = self._target_normalizer(training[1])
-        # val_slam = self._source_normalizer(validation[0])
-        # val_gt = self._target_normalizer(validation[1])
-
-        # self._model.fit(
-        #     slam,
-        #     gt,
-        #     validation_data=(val_slam, val_gt),
-        #     callbacks=self._callbacks,
-        #     epochs=200,
-        #     batch_size=best_batch_size,
-        #     verbose=True,
-        # )
 
 
 def serialize_normalizer(normalizer):
