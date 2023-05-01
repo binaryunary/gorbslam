@@ -18,7 +18,7 @@ from gorbslam.common.plotting_utils import (
     create_scattermapbox,
     create_slam_2d_scatter,
 )
-from gorbslam.common.utils import ensure_dir
+from gorbslam.common.utils import calculate_ape, create_pose_trajectory, ensure_dir
 from gorbslam.models import GBRModel, NNModel, RFRModel, SVRModel, UmeyamaModel
 from gorbslam.models.nn_clr_model import NNCLRModel
 
@@ -73,6 +73,31 @@ class ORBSLAMProcessor:
         self.orbslam.mapping.save(self.processed_results_dir)
         for localization in self.orbslam.localization.values():
             localization.save(self.processed_results_dir)
+
+    def calculate_ape_metric_all(self):
+        ape_errors = {}
+        ape_errors["mapping"] = calculate_ape(
+            create_pose_trajectory(self.orbslam.mapping.slam.utm.to_numpy()),
+            create_pose_trajectory(self.orbslam.mapping.gt.utm.to_numpy()),
+        )
+        for name, localization in self.orbslam.localization.items():
+            ape_errors[name] = calculate_ape(
+                create_pose_trajectory(localization.slam.utm.to_numpy()),
+                create_pose_trajectory(localization.gt.utm.to_numpy()),
+            )
+
+        return ape_errors
+
+    def calculate_ape_stats_all(self):
+        all_ape = self.calculate_ape_metric_all()
+        all_ape_errors = [e for ape in all_ape.values() for e in ape.error]
+        return {
+            "mean": np.mean(all_ape_errors),
+            "median": np.median(all_ape_errors),
+            "std": np.std(all_ape_errors),
+            "min": np.min(all_ape_errors),
+            "max": np.max(all_ape_errors),
+        }
 
     def create_map_plot(self):
         traces = [
@@ -207,14 +232,14 @@ class ORBSLAMProcessor:
         return fig
 
     def create_ape_plot(self, loc: int = None):
-        if not loc:
+        if loc is None:
             return create_ape_fig(
                 self.orbslam.mapping.slam.utm,
                 self.orbslam.mapping.gt.utm,
                 "SLAM (fitted)",
             )
         else:
-            if (loc > len(self.orbslam.localization)) or (loc < 1):
+            if (loc > len(self.orbslam.localization)) or (loc < 0):
                 raise ArgumentError(f"Invalid localization number: {loc}")
             return create_ape_fig(
                 self.orbslam.localization[loc].slam.utm,

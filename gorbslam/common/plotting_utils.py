@@ -9,7 +9,7 @@ from evo.tools.plot import plot_mode_to_idx, PlotMode
 from evo.core.metrics import StatisticsType
 from plotly.subplots import make_subplots
 
-from gorbslam.common.utils import calculate_ape, create_trajectory_from_array
+from gorbslam.common.utils import calculate_ape, create_pose_trajectory
 
 
 FIG_HEIGHT = 800
@@ -137,8 +137,8 @@ def create_ape_trace(
     predicted: pd.DataFrame,
     reference_gt: pd.DataFrame,
 ):
-    trajectory = create_trajectory_from_array(predicted.to_numpy())
-    trajectory_gt = create_trajectory_from_array(reference_gt.to_numpy())
+    trajectory = create_pose_trajectory(predicted.to_numpy())
+    trajectory_gt = create_pose_trajectory(reference_gt.to_numpy())
     ape_metric = calculate_ape(trajectory, trajectory_gt)
 
     x_idx, y_idx, z_idx = plot_mode_to_idx(PlotMode.xy)
@@ -240,8 +240,8 @@ def create_ape_fig_batch(
 
 
 def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame, title=None):
-    trajectory = create_trajectory_from_array(predicted.to_numpy())
-    trajectory_gt = create_trajectory_from_array(reference_gt.to_numpy())
+    trajectory = create_pose_trajectory(predicted.to_numpy())
+    trajectory_gt = create_pose_trajectory(reference_gt.to_numpy())
 
     ape_metric = calculate_ape(trajectory, trajectory_gt)
 

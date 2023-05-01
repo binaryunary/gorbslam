@@ -59,7 +59,12 @@ class UmeyamaModel(ORBSLAMCorrectorModel):
         else:
             with open(self._model_params_path, "r") as f:
                 self._model_params = json.loads(
-                    f.read(), object_hook=lambda d: UmeyamaParams(**d)
+                    f.read(),
+                    object_hook=lambda d: UmeyamaParams(
+                        R=np.array(d["R"]),
+                        t=np.array(d["t"]),
+                        c=d["c"],
+                    ),
                 )
                 self._is_loaded = True
 

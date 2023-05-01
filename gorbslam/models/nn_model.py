@@ -20,7 +20,7 @@ from keras.callbacks import EarlyStopping, TensorBoard, ReduceLROnPlateau
 from keras_tuner import Hyperband
 from gorbslam.models.nn_hypermodel import NNHyperModel
 
-TRAINING_EPOCHS = 200
+TRAINING_EPOCHS = 210
 
 
 class NNModel(ORBSLAMCorrectorModel):
@@ -41,7 +41,7 @@ class NNModel(ORBSLAMCorrectorModel):
         now = datetime.datetime.now()
         tb_out_dirname = f"{self._project_name}_{now.strftime('%Y%m%d_%H%M%S')}"
         self._callbacks = [
-            EarlyStopping(monitor="val_loss", patience=10, verbose=1),
+            EarlyStopping(monitor="val_loss", patience=15, verbose=1),
             ReduceLROnPlateau(
                 monitor="val_loss", factor=0.2, patience=5, verbose=1, min_lr=1e-7
             ),
@@ -152,7 +152,7 @@ class NNModel(ORBSLAMCorrectorModel):
         )
 
         # Downsample data to speed up hp search
-        n_data = math.ceil(source_trajectory.shape[0] * 0.3)
+        n_data = math.ceil(source_trajectory.shape[0] * 0.5)
         train_slam = downsample(source_trajectory, n_data)
         train_gt = downsample(target_trajectory, n_data)
 
