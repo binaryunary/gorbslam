@@ -7,10 +7,10 @@ from tensorflow_addons.optimizers import CyclicalLearningRate
 
 from gorbslam.common.utils import create_training_splits, downsample
 from gorbslam.models.nn_hypermodel import NNHyperModel
-from gorbslam.models.nn_model import NNModel
+from gorbslam.models.fcnn_model import FCNNModel
 
 
-class NNCLRModel(NNModel):
+class FCNNCLRModel(FCNNModel):
     def __init__(self, model_dir):
         super().__init__(model_dir)
         self._callbacks = [

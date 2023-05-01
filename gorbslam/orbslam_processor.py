@@ -19,13 +19,13 @@ from gorbslam.common.plotting_utils import (
     create_slam_2d_scatter,
 )
 from gorbslam.common.utils import calculate_ape, create_pose_trajectory, ensure_dir
-from gorbslam.models import GBRModel, NNModel, RFRModel, SVRModel, UmeyamaModel
-from gorbslam.models.nn_clr_model import NNCLRModel
+from gorbslam.models import GBRModel, FCNNModel, RFRModel, SVRModel, UmeyamaModel
+from gorbslam.models.fcnn_clr_model import FCNNCLRModel
 
 
 class ModelType(Enum):
-    NN = 1
-    NN_CLR = 2
+    FCNN = 1
+    FCNN_CLR = 2
     GBR = 3
     RFR = 4
     SVR = 5
@@ -45,10 +45,10 @@ class ORBSLAMProcessor:
 
         self.orbslam = ORBSLAMResults(self.orbslam_results_dir)
 
-        if model_type == ModelType.NN:
-            self.model = NNModel(self.processed_results_dir)
-        elif model_type == ModelType.NN_CLR:
-            self.model = NNCLRModel(self.processed_results_dir)
+        if model_type == ModelType.FCNN:
+            self.model = FCNNModel(self.processed_results_dir)
+        elif model_type == ModelType.FCNN_CLR:
+            self.model = FCNNCLRModel(self.processed_results_dir)
         elif model_type == ModelType.GBR:
             self.model = GBRModel(self.processed_results_dir)
         elif model_type == ModelType.RFR:

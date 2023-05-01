@@ -23,7 +23,7 @@ from gorbslam.models.nn_hypermodel import NNHyperModel
 TRAINING_EPOCHS = 210
 
 
-class NNModel(ORBSLAMCorrectorModel):
+class FCNNModel(ORBSLAMCorrectorModel):
     def __init__(self, model_dir):
         self._model_dir = model_dir
         self._project_name = path.basename(
