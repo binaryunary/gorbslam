@@ -24,12 +24,18 @@ class TraceColors:
 
 
 def create_scattermapbox(
-    df: pd.DataFrame, name: str, color: str = None, bold=False, mode="markers"
+    df: pd.DataFrame,
+    name: str,
+    color: str = None,
+    bold=False,
+    mode="markers",
+    opacity=1,
 ):
     return go.Scattermapbox(
         lat=df.lat,
         lon=df.lon,
         mode=mode,
+        opacity=opacity,
         line=dict(width=5) if bold else None,
         marker=dict(color=color) if color else None,
         name=name,
