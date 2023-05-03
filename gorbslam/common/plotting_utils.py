@@ -60,11 +60,14 @@ def create_map_fig(
     return fig
 
 
-def create_2d_scatter(df: pd.DataFrame, name, color=None, bold=False, mode="markers"):
+def create_2d_scatter(
+    df: pd.DataFrame, name, color=None, bold=False, mode="markers", opacity=1
+):
     return go.Scatter(
         x=df.x,
         y=df.y,
         mode=mode,
+        opacity=opacity,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
         name=name,
@@ -105,7 +108,12 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
         fig.add_trace(trace)
 
     fig.update_layout(
-        title=title, yaxis=dict(scaleanchor="x", scaleratio=1), height=FIG_HEIGHT
+        title=title,
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        height=FIG_HEIGHT,
+        legend=dict(
+            yanchor="top", y=0.99, xanchor="left", x=0.01, itemsizing="constant"
+        ),
     )
     return fig
 
@@ -219,8 +227,8 @@ def create_ape_fig_batch(
 
     fig.update_layout(
         title_text=title,
-        height=1600,
-        # width=1200,
+        height=1000,
+        width=1000,
         coloraxis=dict(
             colorscale="Turbo",
             cmin=0,

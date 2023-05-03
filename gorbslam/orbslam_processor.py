@@ -1,8 +1,10 @@
 import os
 from ctypes import ArgumentError
 from enum import Enum
+from plotly.subplots import make_subplots
 
 import numpy as np
+from pyrsistent import inc
 
 from gorbslam.common.orbslam_results import ORBSLAMResults
 from gorbslam.common.plotting_utils import (
@@ -157,8 +159,41 @@ class ORBSLAMProcessor:
 
         return create_2d_fig(traces, title="Trajectories in UTM coordinates")
 
-    def create_2d_plot_slam(self):
-        traces = [
+    def create_2d_plot_slam(self, include_slam=True):
+        traces = []
+
+        if include_slam:
+            traces.append(
+                create_slam_2d_scatter(
+                    self.orbslam.mapping.slam.slam,
+                    "SLAM (mapping)",
+                    color=TraceColors.slam,
+                    mode="lines",
+                ),
+            )
+
+        for name, localization in self.orbslam.localization.items():
+            traces.append(
+                create_slam_2d_scatter(
+                    localization.slam.slam,
+                    f"loc_{name}",
+                    color=TraceColors.loc[name],
+                    mode="markers",
+                )
+            )
+
+        return create_2d_fig(
+            traces, title="Localization trajectories in SLAM coordinates"
+        )
+
+    def create_2d_plot_slam_with_gt(self):
+        gt_trace = create_2d_scatter(
+            self.orbslam.mapping.gt.utm,
+            "GPS (ground truth)",
+            color=TraceColors.gt,
+            mode="markers",
+        )
+        loc_traces = [
             create_slam_2d_scatter(
                 self.orbslam.mapping.slam.slam,
                 "SLAM (mapping)",
@@ -168,16 +203,35 @@ class ORBSLAMProcessor:
         ]
 
         for name, localization in self.orbslam.localization.items():
-            traces.append(
+            loc_traces.append(
                 create_slam_2d_scatter(
                     localization.slam.slam,
-                    f"SLAM loc_{name}",
+                    f"loc_{name}",
                     color=TraceColors.loc[name],
                     mode="markers",
                 )
             )
 
-        return create_2d_fig(traces, title="Trajectories in SLAM coordinates")
+        fig = make_subplots(
+            rows=1,
+            cols=2,
+            subplot_titles=("Ground truth", "SLAM"),
+            horizontal_spacing=0.05,
+        )
+
+        fig.add_trace(gt_trace, row=1, col=1)
+        for trace in loc_traces:
+            fig.add_trace(trace, row=1, col=2)
+
+        fig.update_layout(
+            yaxis1=dict(scaleanchor="x1", scaleratio=1),
+            yaxis2=dict(scaleanchor="x2", scaleratio=1),
+            legend=dict(itemsizing="constant"),
+            margin={"t": 50, "b": 10, "l": 10, "r": 10},
+            title_text=f"{self.trajectory_name}",
+        )
+
+        return fig
 
     def create_3d_plot_slam(self):
         traces = [
@@ -209,23 +263,26 @@ class ORBSLAMProcessor:
 
         return create_3d_fig(traces, title="Trajectories in SLAM coordinates")
 
-    def create_ape_plot_all(self):
-        traces = [
-            create_ape_trace(
-                self.orbslam.mapping.slam.utm, self.orbslam.mapping.gt.utm
-            ),
-        ]
+    def create_ape_plot_all(self, include_slam=True):
+        traces = []
+        subplot_titles = []
+        if include_slam:
+            traces.append(
+                create_ape_trace(
+                    self.orbslam.mapping.slam.utm, self.orbslam.mapping.gt.utm
+                ),
+            )
+            subplot_titles.append("SLAM (mapping)")
 
         for name, localization in self.orbslam.localization.items():
             traces.append(create_ape_trace(localization.slam.utm, localization.gt.utm))
 
-        subplot_titles = ["SLAM (fitted)"]
         for name, localization in self.orbslam.localization.items():
             subplot_titles.append(f"loc_{name}")
 
         fig = create_ape_fig_batch(
             traces,
-            title=f"[{self.model_type.name}] Absolute Pose Error (APE)",
+            title=f"{self.trajectory_name} - {self.model_type.name} - localization APE (m)",
             subplot_titles=subplot_titles,
         )
 
