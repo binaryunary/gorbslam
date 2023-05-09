@@ -23,16 +23,31 @@ class TrackType(Enum):
 
 
 class Track:
+    """
+    An abstraction layer for a sequence of 3D points.
+    This class allows to create a Track object from a SLAM trajectory, a WGS84 trajectory or a UTM35N trajectory,
+    and to convert between these coordinate systems.
+    """
+
     @staticmethod
     def fromSLAM(track_data: pd.DataFrame):
+        """
+        Creates a Track object from a SLAM trajectory.
+        """
         return Track(track_data, TrackType.SLAM)
 
     @staticmethod
     def fromWGS84(track_data: pd.DataFrame):
+        """
+        Creates a Track object from a WGS84 trajectory.
+        """
         return Track(track_data, TrackType.WGS84)
 
     @staticmethod
     def fromUTM35N(track_data: pd.DataFrame):
+        """
+        Creates a Track object from a UTM35N trajectory.
+        """
         return Track(track_data, TrackType.UTM35N)
 
     def __init__(self, track_data: pd.DataFrame, track_type: TrackType):
@@ -51,10 +66,16 @@ class Track:
 
     @property
     def slam(self):
+        """
+        Returns the track in SLAM coordinates.
+        """
         return self._slam
 
     @property
     def utm(self):
+        """
+        Returns the track in UTM35N coordinates.
+        """
         if self._utm is None and self._wgs is None:
             raise ValueError(
                 "Cannot convert to UTM35N without WGS84 data.\
@@ -73,6 +94,9 @@ class Track:
 
     @property
     def wgs(self):
+        """
+        Returns the track in WGS84 coordinates.
+        """
         if self._wgs is None and self._utm is None:
             raise ValueError(
                 "Cannot convert to WGS84 without UTM35N data.\
@@ -90,6 +114,9 @@ class Track:
         return self._wgs
 
     def fit(self, model_predictor):
+        """
+        Transforms the SLAM track to UTM35N coordinates using the given model.
+        """
         predicted_utm = model_predictor(self._slam[["x", "y", "z"]].to_numpy())
         tmp = self._slam.copy()
         tmp[["x", "y", "z"]] = predicted_utm
@@ -97,6 +124,10 @@ class Track:
 
 
 class SLAMTrajectory:
+    """
+    A container for a SLAM trajectory and its ground truth.
+    """
+
     def __init__(self, trajectory_tum, trajectory_tum_gt_wgs, trajectory_name):
         self._slam = Track.fromSLAM(trajectory_tum)
         self._gt = Track.fromWGS84(trajectory_tum_gt_wgs)
@@ -104,10 +135,16 @@ class SLAMTrajectory:
 
     @property
     def slam(self):
+        """
+        Returns the SLAM track of the trajectory.
+        """
         return self._slam
 
     @property
     def gt(self):
+        """
+        Returns the ground truth track of the trajectory.
+        """
         return self._gt
 
     @property
@@ -115,6 +152,9 @@ class SLAMTrajectory:
         return self._trajectory_name
 
     def save(self, dirname: str):
+        """
+        Saves the SLAM trajectory and its ground truth to the given directory.
+        """
         # Save the ground truth
         write_tum_file(
             path.join(dirname, f"{self.trajectory_name}_gt_tum.txt"),
@@ -127,6 +167,10 @@ class SLAMTrajectory:
 
 
 def read_mapping_data(results_root) -> tuple[np.ndarray, SLAMTrajectory]:
+    """
+    Reads the mapping data from the given directory.
+    ORB-SLAM3 may create multiple maps if it loses tracking, we just return the longest one.
+    """
     mapping_files = glob.glob("m_*_*.txt", root_dir=results_root)
     mapping_files.sort()
     mapping_data = {}
@@ -160,6 +204,9 @@ def read_mapping_data(results_root) -> tuple[np.ndarray, SLAMTrajectory]:
 
 
 def read_localization_data(results_root) -> dict[int, SLAMTrajectory]:
+    """
+    Reads all localization files (l_*_trajectory.txt, l_*_trajectory_gt.txt) from the given directory.
+    """
     localization_files = glob.glob("l_*_*.txt", root_dir=results_root)
     # Sort to get pairs of estimates and ground truths
     # l_*_trajectory.txt
