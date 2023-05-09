@@ -13,6 +13,7 @@ from gorbslam.common.utils import calculate_ape, create_pose_trajectory
 
 
 FIG_HEIGHT = 800
+FIG_WIDTH = 800
 
 
 @dataclass(frozen=True)
@@ -111,9 +112,11 @@ def create_2d_fig(traces: List[go.Scatter], title=None) -> go.Figure:
         title=title,
         yaxis=dict(scaleanchor="x", scaleratio=1),
         height=FIG_HEIGHT,
+        width=FIG_WIDTH,
         legend=dict(
             yanchor="top", y=0.99, xanchor="left", x=0.01, itemsizing="constant"
         ),
+        margin={"t": 50, "b": 20, "l": 20, "r": 20},
     )
     return fig
 
@@ -194,15 +197,15 @@ def create_ape_trace(
 def create_ape_fig_batch(
     traces: List[APETrace], title=None, subplot_titles=None
 ) -> go.Figure:
-    n_cols = 2
+    n_cols = min(2, len(traces))
     n_rows = len(traces) // n_cols + len(traces) % n_cols
 
     fig = make_subplots(
         n_rows,
         n_cols,
         subplot_titles=subplot_titles,
-        horizontal_spacing=0.08,
-        vertical_spacing=0.08,
+        horizontal_spacing=0.1,
+        vertical_spacing=0.1,
     )
     for i, trace in enumerate(traces):
         col = i % n_cols + 1
@@ -227,12 +230,9 @@ def create_ape_fig_batch(
 
     fig.update_layout(
         title_text=title,
-        height=1000,
-        width=1000,
         coloraxis=dict(
             colorscale="Turbo",
             cmin=0,
-            # cmin=all_ape_values.min(),
             cmax=tick_p99,
             colorbar=dict(
                 title="APE (m)",
@@ -246,7 +246,7 @@ def create_ape_fig_batch(
                     f"p99: {tick_p99:.2f}",
                 ],
                 ticks="outside",
-                orientation="h",
+                orientation="v",
             ),
         ),
     )

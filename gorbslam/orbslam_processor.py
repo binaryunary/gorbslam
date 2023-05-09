@@ -122,7 +122,7 @@ class ORBSLAMProcessor:
             traces.append(
                 create_scattermapbox(
                     localization.slam.wgs,
-                    f"fitted loc_{name}",
+                    f"fitted loc_{name}{' (self)' if name == 0 else ''}",
                     color=TraceColors.loc[name],
                 )
             )
@@ -132,37 +132,45 @@ class ORBSLAMProcessor:
 
         return create_map_fig(traces, (center_lat, center_lon))
 
-    def create_2d_plot_utm(self):
-        traces = [
+    def create_2d_plot_utm(self, only_gt=False):
+        traces = []
+
+        traces.append(
             create_2d_scatter(
                 self.orbslam.mapping.gt.utm,
                 "GPS (ground truth)",
                 color=TraceColors.gt,
-                mode="markers",
-            ),
+                mode="lines",
+            )
+        ),
+
+        if only_gt:
+            return create_2d_fig(traces, title=f"{self.trajectory_name} ground truth")
+
+        traces.append(
             create_2d_scatter(
                 self.orbslam.mapping.slam.utm,
                 "fitted SLAM (mapping)",
                 color=TraceColors.slam,
                 mode="markers",
-            ),
-        ]
+            )
+        ),
 
         for name, localization in self.orbslam.localization.items():
             traces.append(
                 create_2d_scatter(
                     localization.slam.utm,
-                    f"fitted loc_{name}",
+                    f"fitted loc_{name}{' (self)' if name == 0 else ''}",
                     color=TraceColors.loc[name],
                 )
             )
 
         return create_2d_fig(traces, title="Trajectories in UTM coordinates")
 
-    def create_2d_plot_slam(self, include_slam=True):
+    def create_2d_plot_slam(self, only_slam=False, include_slam=True):
         traces = []
 
-        if include_slam:
+        if include_slam or only_slam:
             traces.append(
                 create_slam_2d_scatter(
                     self.orbslam.mapping.slam.slam,
@@ -171,19 +179,22 @@ class ORBSLAMProcessor:
                     mode="lines",
                 ),
             )
+            if only_slam:
+                return create_2d_fig(traces, title=f"{self.trajectory_name} SLAM")
 
         for name, localization in self.orbslam.localization.items():
             traces.append(
                 create_slam_2d_scatter(
                     localization.slam.slam,
-                    f"loc_{name}",
+                    f"loc_{name}{' (self)' if name == 0 else ''}",
                     color=TraceColors.loc[name],
                     mode="markers",
                 )
             )
 
         return create_2d_fig(
-            traces, title="Localization trajectories in SLAM coordinates"
+            traces,
+            title=f"Localization trajectories on {self.trajectory_name} based map",
         )
 
     def create_2d_plot_slam_with_gt(self):
@@ -206,7 +217,7 @@ class ORBSLAMProcessor:
             loc_traces.append(
                 create_slam_2d_scatter(
                     localization.slam.slam,
-                    f"loc_{name}",
+                    f"loc_{name}{' (self)' if name == 0 else ''}",
                     color=TraceColors.loc[name],
                     mode="markers",
                 )
@@ -278,12 +289,20 @@ class ORBSLAMProcessor:
             traces.append(create_ape_trace(localization.slam.utm, localization.gt.utm))
 
         for name, localization in self.orbslam.localization.items():
-            subplot_titles.append(f"loc_{name}")
+            subplot_titles.append(
+                f"loc_{name}{' (self)' if name == 0 else ''}",
+            )
 
         fig = create_ape_fig_batch(
             traces,
             title=f"{self.trajectory_name} - {self.model_type.name} - localization APE (m)",
             subplot_titles=subplot_titles,
+        )
+
+        fig.update_layout(
+            height=1200,
+            width=1000,
+            margin={"t": 50, "b": 10, "l": 10, "r": 10},
         )
 
         return fig
@@ -301,5 +320,5 @@ class ORBSLAMProcessor:
             return create_ape_fig(
                 self.orbslam.localization[loc].slam.utm,
                 self.orbslam.localization[loc].gt.utm,
-                f"loc_{loc}",
+                f"loc_{loc}{' (self)' if loc == 0 else ''}",
             )
