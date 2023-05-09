@@ -81,7 +81,7 @@ def create_slam_2d_scatter(
 ):
     return go.Scatter(
         x=df.x,
-        y=df.z,  # y and z are swapped in case of monocular SLAM
+        y=df.z,  # y and z are swapped in case of monocular SLAM, see https://github.com/UZ-SLAMLab/ORB_SLAM3/blob/master/Calibration_Tutorial.pdf
         mode=mode,
         line=dict(width=5) if bold else None,
         marker=dict(color=color, size=3) if color else None,
@@ -324,14 +324,6 @@ def create_ape_fig(predicted: pd.DataFrame, reference_gt: pd.DataFrame, title=No
                 ),
             ),
         )
-    )
-
-    stats_title = "<br>".join(
-        [
-            f"Mean APE: {ape_metric.get_statistic(StatisticsType.mean)}",
-            f"Median APE: {ape_metric.get_statistic(StatisticsType.median)}",
-            f"RMS APE: {ape_metric.get_statistic(StatisticsType.rmse)}",
-        ]
     )
 
     fig.update_layout(
