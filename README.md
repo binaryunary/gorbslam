@@ -32,5 +32,5 @@ Go to `notebooks/plot_results.ipynb` and run it.
 
 
 # Technical details
-- requires Python 3.10.11+
+- requires Python >= 3.10.11
 - all dependencies are listed in `environment.yml`
