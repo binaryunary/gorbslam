@@ -355,7 +355,7 @@ class ORBSLAMProcessor:
 
         fig.update_layout(
             height=1200,
-            width=1000,
+            width=1200,
             margin={"t": 50, "b": 10, "l": 10, "r": 10},
         )
 
